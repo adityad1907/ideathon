@@ -434,185 +434,319 @@
   <script src="medisense-db.js"></script>
   <script src="medisense.js"></script>
 
-  <!-- ── AI CHAT WIDGET ── -->
+
+  <!-- Floating button -->
   <div id="ai-chat-widget">
     <button id="ai-chat-toggle" aria-label="Open AI Health Assistant">
-      <svg id="chat-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.527 3.66 1.438 5.168L2.5 21.5l4.332-.938A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-        <circle cx="8.5" cy="12" r="1" fill="currentColor"/>
-        <circle cx="12" cy="12" r="1" fill="currentColor"/>
-        <circle cx="15.5" cy="12" r="1" fill="currentColor"/>
+      <!-- Chat bubble icon (shown when closed) -->
+      <svg id="chat-icon" width="26" height="26" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.527 3.66 1.438 5.168L2.5 21.5l4.332-.938A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
+          fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        <circle cx="8.5"  cy="12" r="1.1" fill="currentColor"/>
+        <circle cx="12"   cy="12" r="1.1" fill="currentColor"/>
+        <circle cx="15.5" cy="12" r="1.1" fill="currentColor"/>
       </svg>
+      <!-- X icon (shown when open) -->
       <svg id="close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
-        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
       </svg>
+      <!-- Unread badge (disappears on open) -->
       <span id="chat-unread" class="chat-unread">1</span>
     </button>
+
+    <!-- Chat panel -->
     <div id="ai-chat-panel" class="chat-panel hidden">
+
+      <!-- Header -->
       <div class="chat-header">
         <div class="chat-header-info">
           <div class="chat-avatar">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/></svg>
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+              <path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+            </svg>
           </div>
           <div>
             <div class="chat-title">MediSense AI</div>
-            <div class="chat-subtitle">Health Assistant</div>
+            <div class="chat-subtitle"><span class="chat-online-dot"></span> Powered by OpenAI GPT-4o</div>
           </div>
         </div>
-        <button id="chat-clear-btn" class="chat-clear-btn" title="Clear chat">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-      </div>
-      <div id="chat-messages" class="chat-messages">
-        <div class="chat-msg ai">
-          <div class="msg-bubble">
-            👋 Hi! I'm your MediSense AI assistant. I can help you understand your vitals, answer health questions, and give insights based on your data.<br><br>How can I help you today?
-          </div>
+        <div style="display:flex;gap:4px">
+          <button id="chat-clear-btn" class="chat-clear-btn" title="Clear conversation">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
+            </svg>
+          </button>
         </div>
       </div>
+
+      <!-- Messages -->
+      <div id="chat-messages" class="chat-messages"></div>
+
+      <!-- Quick suggestion chips -->
       <div class="chat-suggestions" id="chat-suggestions">
-        <button class="suggestion-chip" onclick="window.sendSuggestion(this)">Analyze my vitals</button>
-        <button class="suggestion-chip" onclick="window.sendSuggestion(this)">What is a normal heart rate?</button>
-        <button class="suggestion-chip" onclick="window.sendSuggestion(this)">Tips to lower blood pressure</button>
+        <button class="suggestion-chip" data-msg="Analyze my current vitals and tell me if anything looks concerning.">Analyze my vitals</button>
+        <button class="suggestion-chip" data-msg="What is a normal heart rate range for adults?">Normal heart rate?</button>
+        <button class="suggestion-chip" data-msg="What does low SpO2 mean and when should I worry?">What is low SpO2?</button>
+        <button class="suggestion-chip" data-msg="Give me tips to help lower high blood pressure naturally.">Lower BP tips</button>
+        <button class="suggestion-chip" data-msg="Explain what blood glucose levels mean.">Blood glucose explained</button>
       </div>
+
+      <!-- Input bar -->
       <div class="chat-input-area">
-        <textarea id="chat-input" placeholder="Ask about your health..." rows="1"></textarea>
-        <button id="chat-send-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <textarea id="chat-input" placeholder="Ask anything about your health…" rows="1"></textarea>
+        <button id="chat-send-btn" title="Send message" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </button>
       </div>
-    </div>
-  </div>
+      <div class="chat-disclaimer">AI responses are informational only — not medical advice.</div>
+
+    </div><!-- /chat-panel -->
+  </div><!-- /ai-chat-widget -->
 
   <script>
-  // ── AI CHAT WIDGET LOGIC ──────────────────────────────────
-  (function() {
-    const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-    // ⚠️  Replace with your Anthropic API key:
-    const ANTHROPIC_KEY = 'YOUR_ANTHROPIC_API_KEY';
+  // ════════════════════════════════════════════════════════
+  //  MEDISENSE — OPENAI CHAT WIDGET
+  //
+  //  HOW TO ACTIVATE:
+  //  1. Go to https://platform.openai.com/api-keys
+  //  2. Click "+ Create new secret key"
+  //  3. Replace YOUR_OPENAI_API_KEY below with your key
+  //
+  //  ⚠️  This sends your key from the browser (client-side).
+  //      Fine for local/demo use. For production, route
+  //      requests through your own backend server instead.
+  // ════════════════════════════════════════════════════════
+  (function () {
+    const API_KEY = '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'; // ← paste your key here
+    const API_URL = 'https://api.openai.com/v1/chat/completions';
+    const MODEL   = 'gpt-4o-mini'; // options: gpt-4o-mini (fast/cheap), gpt-4o (smarter)
 
-    const toggle   = document.getElementById('ai-chat-toggle');
-    const panel    = document.getElementById('ai-chat-panel');
-    const input    = document.getElementById('chat-input');
-    const sendBtn  = document.getElementById('chat-send-btn');
-    const msgs     = document.getElementById('chat-messages');
-    const clearBtn = document.getElementById('chat-clear-btn');
-    const unread   = document.getElementById('chat-unread');
-    const chatIcon = document.getElementById('chat-icon');
-    const closeIcon= document.getElementById('close-icon');
-    let history    = [];
-    let isOpen     = false;
+    // ── DOM refs ────────────────────────────────────────
+    const toggle    = document.getElementById('ai-chat-toggle');
+    const panel     = document.getElementById('ai-chat-panel');
+    const msgs      = document.getElementById('chat-messages');
+    const input     = document.getElementById('chat-input');
+    const sendBtn   = document.getElementById('chat-send-btn');
+    const clearBtn  = document.getElementById('chat-clear-btn');
+    const unread    = document.getElementById('chat-unread');
+    const chatIcon  = document.getElementById('chat-icon');
+    const closeIcon = document.getElementById('close-icon');
+    const suggs     = document.getElementById('chat-suggestions');
 
+    let history = []; // Claude message history
+    let isOpen  = false;
+    let isBusy  = false;
+
+    // ── Build greeting + initial bot message ──────────
+    function initGreeting() {
+      // Access the global `state` from medisense.js
+      const appState = (typeof state !== 'undefined') ? state : null;
+      const name = appState?.user?.full_name
+        || appState?.user?.email?.split('@')[0]
+        || null;
+
+      const hasVitals = appState?.vitals?.length > 0;
+      const greeting = name ? `👋 Hi <strong>${name}</strong>!` : '👋 Hello!';
+      const vitalsLine = hasVitals
+        ? `I can see your latest vitals are loaded. Ask me anything about them!`
+        : `No vitals recorded yet — but I can still answer your health questions.`;
+
+      appendBot(`${greeting} I'm your <strong>MediSense AI</strong> assistant, powered by ChatGPT.<br><br>${vitalsLine}<br><br>What would you like to know?`);
+    }
+
+    // ── Build vitals context for Claude system prompt ─
+    function buildVitalsContext() {
+      const appState = (typeof state !== 'undefined') ? state : null;
+      const v = appState?.vitals?.[0];
+      if (!v) return 'No vitals data has been recorded yet.';
+
+      const fmt = (val, unit) => val != null ? `${val} ${unit}` : 'N/A';
+      const ts  = v.recorded_at
+        ? new Date(v.recorded_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+        : 'unknown time';
+
+      return [
+        `Most recent patient vitals (recorded ${ts}):`,
+        `• Heart Rate:        ${fmt(v.heart_rate, 'bpm')}`,
+        `• SpO₂:             ${fmt(v.spo2, '%')}`,
+        `• Temperature:      ${fmt(v.temperature, '°C')}`,
+        `• Blood Pressure:   ${v.bp_systolic != null ? `${v.bp_systolic}/${v.bp_diastolic} mmHg` : 'N/A'}`,
+        `• Respiratory Rate: ${fmt(v.resp_rate, '/min')}`,
+        `• Blood Glucose:    ${fmt(v.blood_glucose, 'mg/dL')}`,
+      ].join('\n');
+    }
+
+    function buildSystemPrompt() {
+      const appState = (typeof state !== 'undefined') ? state : null;
+      const role = appState?.role || 'healthcare professional';
+      return `You are MediSense AI, a smart clinical assistant embedded in a hospital vitals monitoring dashboard. You are speaking with a ${role}.
+
+${buildVitalsContext()}
+
+Guidelines:
+- Be concise (under 120 words unless detailed explanation is requested)
+- Reference actual vitals data above when relevant
+- Use plain language for family members, clinical language for doctors
+- Use bullet points for lists
+- Bold important values using **value**
+- Never diagnose, prescribe, or replace a physician
+- Always remind users this is informational, not medical advice
+- If asked something unrelated to health/medicine, politely redirect`;
+    }
+
+    // ── Open / close ─────────────────────────────────
     toggle.addEventListener('click', () => {
       isOpen = !isOpen;
       panel.classList.toggle('hidden', !isOpen);
       chatIcon.style.display  = isOpen ? 'none'  : 'block';
       closeIcon.style.display = isOpen ? 'block' : 'none';
       unread.style.display    = 'none';
-      if (isOpen) input.focus();
+      if (isOpen) {
+        if (msgs.children.length === 0) initGreeting();
+        setTimeout(() => input.focus(), 100);
+        msgs.scrollTop = msgs.scrollHeight;
+      }
     });
 
+    // Hide unread badge on open, show after 2s on first load
+    setTimeout(() => { if (!isOpen) unread.style.display = 'flex'; }, 2000);
+
+    // ── Clear chat ───────────────────────────────────
     clearBtn.addEventListener('click', () => {
       history = [];
-      msgs.innerHTML = '<div class="chat-msg ai"><div class="msg-bubble">Chat cleared. How can I help you?</div></div>';
+      msgs.innerHTML = '';
+      initGreeting();
+      suggs.style.display = 'flex';
     });
 
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    // ── Suggestion chips ─────────────────────────────
+    suggs.addEventListener('click', e => {
+      const chip = e.target.closest('.suggestion-chip');
+      if (!chip) return;
+      input.value = chip.dataset.msg;
+      suggs.style.display = 'none';
+      sendMessage();
     });
+
+    // ── Input handling ────────────────────────────────
     input.addEventListener('input', () => {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+      sendBtn.disabled = !input.value.trim() || isBusy;
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
     sendBtn.addEventListener('click', sendMessage);
 
-    window.sendSuggestion = function(btn) {
-      input.value = btn.textContent;
-      document.getElementById('chat-suggestions').style.display = 'none';
-      sendMessage();
-    };
-
-    function getVitalsContext() {
-      const get = id => document.getElementById(id)?.textContent?.trim() || '—';
-      return [
-        'Current patient vitals from MediSense dashboard:',
-        '- Heart rate: '    + get('stat-hr'),
-        '- SpO2: '          + get('stat-spo2'),
-        '- Temperature: '   + get('stat-temp'),
-        '- Blood pressure: '+ get('stat-bp'),
-        '- Respiration: '   + get('stat-resp'),
-        '- Glucose: '       + get('stat-glucose'),
-      ].join('\n');
-    }
-
-    function appendMsg(role, text) {
-      const div = document.createElement('div');
-      div.className = 'chat-msg ' + role;
-      div.innerHTML = '<div class="msg-bubble">' + text.replace(/\n/g, '<br>') + '</div>';
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
-      return div;
-    }
-
-    function showTyping() {
-      const div = document.createElement('div');
-      div.className = 'chat-msg ai chat-typing';
-      div.id = 'typing-indicator';
-      div.innerHTML = '<div class="msg-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
-      msgs.appendChild(div);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    function removeTyping() {
-      document.getElementById('typing-indicator')?.remove();
-    }
-
+    // ── Core send logic ───────────────────────────────
     async function sendMessage() {
       const text = input.value.trim();
-      if (!text) return;
+      if (!text || isBusy) return;
+
       input.value = '';
       input.style.height = 'auto';
       sendBtn.disabled = true;
+      suggs.style.display = 'none';
+      isBusy = true;
 
-      appendMsg('user', text);
+      appendUser(text);
       history.push({ role: 'user', content: text });
-      showTyping();
+
+      const typingEl = appendTyping();
 
       try {
-        const res = await fetch(ANTHROPIC_API, {
+        // OpenAI expects system prompt as the first message in the array
+        const messages = [
+          { role: 'system', content: buildSystemPrompt() },
+          ...history,
+        ];
+
+        const res = await fetch(API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': ANTHROPIC_KEY,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-client-side-allow-unsafe': 'true'
+            'Authorization': `Bearer ${API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 600,
-            system: 'You are MediSense AI, a helpful health assistant embedded in a medical monitoring dashboard. Be concise, friendly, and medically accurate. Always remind users to consult a doctor for diagnoses. \n\n' + getVitalsContext(),
-            messages: history
-          })
+            model: MODEL,
+            max_tokens: 800,
+            messages,
+          }),
         });
 
         const data = await res.json();
-        removeTyping();
+        typingEl.remove();
 
         if (data.error) {
-          appendMsg('ai', '⚠️ ' + (data.error.message || 'Something went wrong. Check your API key.'));
+          const msg = data.error.message || 'Unknown error';
+          const hint = API_KEY === 'YOUR_OPENAI_API_KEY'
+            ? '<br><br>💡 <strong>Tip:</strong> Paste your OpenAI API key in <code>index.html</code> where it says <code>YOUR_OPENAI_API_KEY</code>.'
+            : '';
+          appendBot(`⚠️ API error: ${escHtml(msg)}${hint}`);
         } else {
-          const reply = data.content?.[0]?.text || 'Sorry, I could not generate a response.';
+          const reply = data.choices?.[0]?.message?.content || 'No response generated.';
           history.push({ role: 'assistant', content: reply });
-          appendMsg('ai', reply);
+          appendBot(renderMarkdown(reply));
         }
-      } catch(err) {
-        removeTyping();
-        appendMsg('ai', '⚠️ Network error. Please try again.');
+
+      } catch (err) {
+        typingEl.remove();
+        appendBot(`⚠️ Network error — please check your connection and try again.`);
       }
 
-      sendBtn.disabled = false;
+      isBusy = false;
+      sendBtn.disabled = !input.value.trim();
       input.focus();
     }
+
+    // ── Render helpers ────────────────────────────────
+    function appendUser(text) {
+      const el = document.createElement('div');
+      el.className = 'chat-msg user';
+      el.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function appendBot(html) {
+      const el = document.createElement('div');
+      el.className = 'chat-msg ai';
+      el.innerHTML = `<div class="msg-bubble">${html}</div>`;
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+      return el;
+    }
+
+    function appendTyping() {
+      const el = document.createElement('div');
+      el.className = 'chat-msg ai chat-typing';
+      el.innerHTML = `<div class="msg-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+      msgs.appendChild(el);
+      msgs.scrollTop = msgs.scrollHeight;
+      return el;
+    }
+
+    // Minimal markdown → HTML (bold, italic, code, bullets, line breaks)
+    function renderMarkdown(text) {
+      return escHtml(text)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+        .replace(/_(.+?)_/g,       '<em>$1</em>')
+        .replace(/`(.+?)`/g,       '<code>$1</code>')
+        .replace(/^[•\-] (.+)/gm,  '<li>$1</li>')
+        .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+        .replace(/\n/g,            '<br>');
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
   })();
   </script>
 

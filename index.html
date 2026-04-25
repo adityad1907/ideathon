@@ -432,5 +432,188 @@
   </div>
 
   <script type="module" src="medisense.js"></script>
+
+  <!-- ── AI CHAT WIDGET ── -->
+  <div id="ai-chat-widget">
+    <button id="ai-chat-toggle" aria-label="Open AI Health Assistant">
+      <svg id="chat-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.527 3.66 1.438 5.168L2.5 21.5l4.332-.938A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z" fill="currentColor" fill-opacity=".15" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <circle cx="8.5" cy="12" r="1" fill="currentColor"/>
+        <circle cx="12" cy="12" r="1" fill="currentColor"/>
+        <circle cx="15.5" cy="12" r="1" fill="currentColor"/>
+      </svg>
+      <svg id="close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
+        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span id="chat-unread" class="chat-unread">1</span>
+    </button>
+    <div id="ai-chat-panel" class="chat-panel hidden">
+      <div class="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-avatar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/></svg>
+          </div>
+          <div>
+            <div class="chat-title">MediSense AI</div>
+            <div class="chat-subtitle">Health Assistant</div>
+          </div>
+        </div>
+        <button id="chat-clear-btn" class="chat-clear-btn" title="Clear chat">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div id="chat-messages" class="chat-messages">
+        <div class="chat-msg ai">
+          <div class="msg-bubble">
+            👋 Hi! I'm your MediSense AI assistant. I can help you understand your vitals, answer health questions, and give insights based on your data.<br><br>How can I help you today?
+          </div>
+        </div>
+      </div>
+      <div class="chat-suggestions" id="chat-suggestions">
+        <button class="suggestion-chip" onclick="window.sendSuggestion(this)">Analyze my vitals</button>
+        <button class="suggestion-chip" onclick="window.sendSuggestion(this)">What is a normal heart rate?</button>
+        <button class="suggestion-chip" onclick="window.sendSuggestion(this)">Tips to lower blood pressure</button>
+      </div>
+      <div class="chat-input-area">
+        <textarea id="chat-input" placeholder="Ask about your health..." rows="1"></textarea>
+        <button id="chat-send-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ── AI CHAT WIDGET LOGIC ──────────────────────────────────
+  (function() {
+    const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+    // ⚠️  Replace with your Anthropic API key:
+    const ANTHROPIC_KEY = 'YOUR_ANTHROPIC_API_KEY';
+
+    const toggle   = document.getElementById('ai-chat-toggle');
+    const panel    = document.getElementById('ai-chat-panel');
+    const input    = document.getElementById('chat-input');
+    const sendBtn  = document.getElementById('chat-send-btn');
+    const msgs     = document.getElementById('chat-messages');
+    const clearBtn = document.getElementById('chat-clear-btn');
+    const unread   = document.getElementById('chat-unread');
+    const chatIcon = document.getElementById('chat-icon');
+    const closeIcon= document.getElementById('close-icon');
+    let history    = [];
+    let isOpen     = false;
+
+    toggle.addEventListener('click', () => {
+      isOpen = !isOpen;
+      panel.classList.toggle('hidden', !isOpen);
+      chatIcon.style.display  = isOpen ? 'none'  : 'block';
+      closeIcon.style.display = isOpen ? 'block' : 'none';
+      unread.style.display    = 'none';
+      if (isOpen) input.focus();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      history = [];
+      msgs.innerHTML = '<div class="chat-msg ai"><div class="msg-bubble">Chat cleared. How can I help you?</div></div>';
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+    });
+    sendBtn.addEventListener('click', sendMessage);
+
+    window.sendSuggestion = function(btn) {
+      input.value = btn.textContent;
+      document.getElementById('chat-suggestions').style.display = 'none';
+      sendMessage();
+    };
+
+    function getVitalsContext() {
+      const get = id => document.getElementById(id)?.textContent?.trim() || '—';
+      return [
+        'Current patient vitals from MediSense dashboard:',
+        '- Heart rate: '    + get('stat-hr'),
+        '- SpO2: '          + get('stat-spo2'),
+        '- Temperature: '   + get('stat-temp'),
+        '- Blood pressure: '+ get('stat-bp'),
+        '- Respiration: '   + get('stat-resp'),
+        '- Glucose: '       + get('stat-glucose'),
+      ].join('\n');
+    }
+
+    function appendMsg(role, text) {
+      const div = document.createElement('div');
+      div.className = 'chat-msg ' + role;
+      div.innerHTML = '<div class="msg-bubble">' + text.replace(/\n/g, '<br>') + '</div>';
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      return div;
+    }
+
+    function showTyping() {
+      const div = document.createElement('div');
+      div.className = 'chat-msg ai chat-typing';
+      div.id = 'typing-indicator';
+      div.innerHTML = '<div class="msg-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    function removeTyping() {
+      document.getElementById('typing-indicator')?.remove();
+    }
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      input.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      appendMsg('user', text);
+      history.push({ role: 'user', content: text });
+      showTyping();
+
+      try {
+        const res = await fetch(ANTHROPIC_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_KEY,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-client-side-allow-unsafe': 'true'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 600,
+            system: 'You are MediSense AI, a helpful health assistant embedded in a medical monitoring dashboard. Be concise, friendly, and medically accurate. Always remind users to consult a doctor for diagnoses. \n\n' + getVitalsContext(),
+            messages: history
+          })
+        });
+
+        const data = await res.json();
+        removeTyping();
+
+        if (data.error) {
+          appendMsg('ai', '⚠️ ' + (data.error.message || 'Something went wrong. Check your API key.'));
+        } else {
+          const reply = data.content?.[0]?.text || 'Sorry, I could not generate a response.';
+          history.push({ role: 'assistant', content: reply });
+          appendMsg('ai', reply);
+        }
+      } catch(err) {
+        removeTyping();
+        appendMsg('ai', '⚠️ Network error. Please try again.');
+      }
+
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  })();
+  </script>
+
 </body>
 </html>

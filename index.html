@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediSense AI — Smart Health Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="medisense.css" />
+</head>
+<body>
+
+  <div id="auth-wrapper" class="auth-wrapper">
+    <div id="toast" class="toast" aria-live="polite"></div>
+    <div id="screen-login" class="auth-card active">
+      <div class="auth-brand">
+        <div class="brand-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="10" fill="#0EA5E9"/>
+            <path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h1 class="brand-name">MediSense <span>AI</span></h1>
+      </div>
+      <p class="auth-subtitle">Smart vitals monitoring for healthcare teams</p>
+
+      <div class="tab-row">
+        <button class="tab active" data-tab="login">Sign In</button>
+        <button class="tab" data-tab="signup">Sign Up</button>
+      </div>
+      <form id="login-form" class="auth-form" novalidate>
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" placeholder="you@hospital.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <div class="pw-wrap">
+            <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+            <button type="button" class="eye-btn" data-target="login-password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <a href="#" id="forgot-link" class="forgot-link">Forgot password?</a>
+        <button type="submit" class="btn-primary" id="login-btn">
+          <span>Sign In</span>
+          <div class="spinner hidden"></div>
+        </button>
+      </form>
+      <form id="signup-form" class="auth-form hidden" novalidate>
+        <div class="field">
+          <label for="signup-name">Full Name</label>
+          <input id="signup-name" type="text" placeholder="Dr. Jane Smith" autocomplete="name" />
+        </div>
+        <div class="field">
+          <label for="signup-email">Email</label>
+          <input id="signup-email" type="email" placeholder="you@hospital.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label for="signup-password">Password</label>
+          <div class="pw-wrap">
+            <input id="signup-password" type="password" placeholder="Min 8 characters" autocomplete="new-password" />
+            <button type="button" class="eye-btn" data-target="signup-password">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="signup-password2">Confirm Password</label>
+          <input id="signup-password2" type="password" placeholder="••••••••" autocomplete="new-password" />
+        </div>
+        <button type="submit" class="btn-primary" id="signup-btn">
+          <span>Create Account</span>
+          <div class="spinner hidden"></div>
+        </button>
+      </form>
+
+      <div class="divider"><span>or</span></div>
+      <button id="google-btn" class="btn-google">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+
+      <p class="otp-prompt">Hospital staff? <a href="#" id="otp-link">Use OTP login →</a></p>
+    </div>
+    <div id="screen-otp" class="auth-card">
+      <button class="back-btn" id="back-from-otp">← Back</button>
+      <div class="auth-brand">
+        <div class="brand-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        <h1 class="brand-name">MediSense <span>AI</span></h1>
+      </div>
+      <p class="auth-subtitle">Enter your email and password, then verify with OTP</p>
+
+      <form id="otp-request-form" class="auth-form" novalidate>
+        <div class="field">
+          <label for="otp-email">Email</label>
+          <input id="otp-email" type="email" placeholder="you@hospital.com" />
+        </div>
+        <div class="field">
+          <label for="otp-password">Password</label>
+          <input id="otp-password" type="password" placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn-primary" id="send-otp-btn">
+          <span>Send OTP</span>
+          <div class="spinner hidden"></div>
+        </button>
+      </form>
+
+      <div id="otp-verify-section" class="otp-verify hidden">
+        <p class="otp-sent-msg">OTP sent! Check your email (or browser console in demo mode).</p>
+        <div class="otp-boxes" id="otp-boxes">
+          <input class="otp-digit" maxlength="1" inputmode="numeric" />
+          <input class="otp-digit" maxlength="1" inputmode="numeric" />
+          <input class="otp-digit" maxlength="1" inputmode="numeric" />
+          <input class="otp-digit" maxlength="1" inputmode="numeric" />
+          <input class="otp-digit" maxlength="1" inputmode="numeric" />
+          <input class="otp-digit" maxlength="1" inputmode="numeric" />
+        </div>
+        <button class="btn-primary" id="verify-otp-btn">
+          <span>Verify OTP</span>
+          <div class="spinner hidden"></div>
+        </button>
+        <button class="btn-ghost" id="resend-otp-btn">Resend OTP (<span id="resend-timer">60</span>s)</button>
+      </div>
+    </div>
+    <div id="screen-forgot" class="auth-card">
+      <button class="back-btn" id="back-from-forgot">← Back</button>
+      <h2 class="screen-title">Reset Password</h2>
+      <p class="auth-subtitle">We'll email you a reset link.</p>
+      <form id="forgot-form" class="auth-form" novalidate>
+        <div class="field">
+          <label for="forgot-email">Email</label>
+          <input id="forgot-email" type="email" placeholder="you@hospital.com" />
+        </div>
+        <button type="submit" class="btn-primary" id="forgot-btn">
+          <span>Send Reset Link</span>
+          <div class="spinner hidden"></div>
+        </button>
+      </form>
+    </div>
+    <div id="screen-role" class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        <h1 class="brand-name">MediSense <span>AI</span></h1>
+      </div>
+      <p class="auth-subtitle">Who are you logging in as?</p>
+      <div class="role-cards">
+        <button class="role-card" data-role="doctor">
+          <div class="role-icon">🩺</div>
+          <div class="role-label">Doctor / Clinician</div>
+          <div class="role-desc">Full access to all patient vitals, trends & alerts</div>
+        </button>
+        <button class="role-card" data-role="family">
+          <div class="role-icon">👨‍👩‍👧</div>
+          <div class="role-label">Family Member</div>
+          <div class="role-desc">View linked patient's readings in real-time</div>
+        </button>
+      </div>
+    </div>
+
+  </div>
+  <div id="app" class="app hidden">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span>MediSense</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-view="dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="#" class="nav-item" data-view="vitals">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Live Vitals
+        </a>
+        <a href="#" class="nav-item" data-view="history">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          History
+        </a>
+        <a href="#" class="nav-item" data-view="alerts">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Alerts
+          <span class="badge" id="alert-badge">0</span>
+        </a>
+        <a href="#" class="nav-item" data-view="profile" id="doctor-only-nav" style="display:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Profile
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info" id="sidebar-user">
+          <div class="avatar" id="sidebar-avatar">?</div>
+          <div class="user-meta">
+            <div class="user-name" id="sidebar-name">—</div>
+            <div class="user-role" id="sidebar-role">—</div>
+          </div>
+        </div>
+        <button class="logout-btn" id="logout-btn" title="Sign out">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main" id="main-content">
+
+      <div class="topbar">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <span class="topbar-title">MediSense AI</span>
+        <div class="topbar-right">
+          <span class="role-pill" id="topbar-role">—</span>
+        </div>
+      </div>
+
+      <div id="view-dashboard" class="view active">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Dashboard</h2>
+            <p class="view-sub" id="dashboard-greeting">Welcome back</p>
+          </div>
+          <div class="header-actions">
+            <span class="last-updated" id="last-updated">—</span>
+            <button class="btn-sm" id="refresh-btn">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon heart">❤️</div>
+            <div class="stat-info">
+              <div class="stat-label">Heart Rate</div>
+              <div class="stat-val" id="stat-hr">— <span>bpm</span></div>
+              <div class="stat-status" id="stat-hr-status">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon spo2">💧</div>
+            <div class="stat-info">
+              <div class="stat-label">SpO₂</div>
+              <div class="stat-val" id="stat-spo2">— <span>%</span></div>
+              <div class="stat-status" id="stat-spo2-status">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon temp">🌡️</div>
+            <div class="stat-info">
+              <div class="stat-label">Temperature</div>
+              <div class="stat-val" id="stat-temp">— <span>°C</span></div>
+              <div class="stat-status" id="stat-temp-status">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon bp">🔴</div>
+            <div class="stat-info">
+              <div class="stat-label">Blood Pressure</div>
+              <div class="stat-val" id="stat-bp">—/— <span>mmHg</span></div>
+              <div class="stat-status" id="stat-bp-status">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon resp">🫁</div>
+            <div class="stat-info">
+              <div class="stat-label">Resp. Rate</div>
+              <div class="stat-val" id="stat-resp">— <span>/min</span></div>
+              <div class="stat-status" id="stat-resp-status">—</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon glucose">🩸</div>
+            <div class="stat-info">
+              <div class="stat-label">Blood Glucose</div>
+              <div class="stat-val" id="stat-glucose">— <span>mg/dL</span></div>
+              <div class="stat-status" id="stat-glucose-status">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="insight-panel">
+          <div class="insight-header">
+            <div class="insight-title">
+              <span class="ai-badge">AI</span>
+              Clinical Insight
+            </div>
+            <button class="btn-sm" id="get-insight-btn">Generate →</button>
+          </div>
+          <div class="insight-body" id="insight-body">
+            <p class="insight-placeholder">Click "Generate" to get an AI-powered interpretation of the latest vitals.</p>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Recent Readings</h3>
+            <span id="readings-count" class="badge">0</span>
+          </div>
+          <div class="table-wrap">
+            <table class="vitals-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>HR</th>
+                  <th>SpO₂</th>
+                  <th>Temp</th>
+                  <th>BP</th>
+                  <th>Resp</th>
+                  <th>Glucose</th>
+                </tr>
+              </thead>
+              <tbody id="vitals-tbody">
+                <tr><td colspan="7" class="empty-row">No readings yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="view-vitals" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Log Vitals</h2>
+            <p class="view-sub">Record a new vital signs reading</p>
+          </div>
+        </div>
+        <div class="form-card">
+          <form id="vitals-form" novalidate>
+            <div class="form-grid">
+              <div class="field">
+                <label>Heart Rate <small>(bpm)</small></label>
+                <input type="number" id="f-hr" placeholder="72" min="30" max="250" />
+              </div>
+              <div class="field">
+                <label>SpO₂ <small>(%)</small></label>
+                <input type="number" id="f-spo2" placeholder="98" min="50" max="100" step="0.1" />
+              </div>
+              <div class="field">
+                <label>Temperature <small>(°C)</small></label>
+                <input type="number" id="f-temp" placeholder="37.0" min="30" max="45" step="0.1" />
+              </div>
+              <div class="field">
+                <label>Systolic BP <small>(mmHg)</small></label>
+                <input type="number" id="f-sys" placeholder="120" min="60" max="250" />
+              </div>
+              <div class="field">
+                <label>Diastolic BP <small>(mmHg)</small></label>
+                <input type="number" id="f-dia" placeholder="80" min="30" max="150" />
+              </div>
+              <div class="field">
+                <label>Resp. Rate <small>(/min)</small></label>
+                <input type="number" id="f-resp" placeholder="16" min="5" max="60" />
+              </div>
+              <div class="field">
+                <label>Blood Glucose <small>(mg/dL)</small></label>
+                <input type="number" id="f-glucose" placeholder="100" min="20" max="600" step="0.1" />
+              </div>
+            </div>
+            <button type="submit" class="btn-primary" id="save-vitals-btn">
+              <span>Save Reading</span>
+              <div class="spinner hidden"></div>
+            </button>
+          </form>
+        </div>
+      </div>
+      <div id="view-history" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Vitals History</h2>
+            <p class="view-sub">All recorded readings from Supabase</p>
+          </div>
+          <button class="btn-sm" id="export-btn">⬇ Export CSV</button>
+        </div>
+        <div class="table-card">
+          <div class="table-wrap">
+            <table class="vitals-table">
+              <thead>
+                <tr><th>Time</th><th>HR</th><th>SpO₂</th><th>Temp</th><th>BP</th><th>Resp</th><th>Glucose</th></tr>
+              </thead>
+              <tbody id="history-tbody">
+                <tr><td colspan="7" class="empty-row">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="view-alerts" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Alerts</h2>
+            <p class="view-sub">Vitals outside normal ranges</p>
+          </div>
+          <button class="btn-sm" id="clear-alerts-btn">Clear All</button>
+        </div>
+        <div id="alerts-list" class="alerts-list">
+          <p class="empty-state">No alerts — all vitals are within normal range ✓</p>
+        </div>
+      </div>
+      <div id="view-profile" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">Profile</h2>
+            <p class="view-sub">Manage your account</p>
+          </div>
+        </div>
+        <div class="form-card profile-card">
+          <div class="profile-avatar" id="profile-avatar-lg">?</div>
+          <div class="field">
+            <label>Full Name</label>
+            <input type="text" id="p-name" placeholder="Dr. Jane Smith" />
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" id="p-email" placeholder="you@hospital.com" disabled />
+          </div>
+          <div class="field">
+            <label>Department</label>
+            <input type="text" id="p-dept" placeholder="Cardiology" />
+          </div>
+          <div class="field">
+            <label>Hospital ID</label>
+            <input type="text" id="p-hospital" placeholder="HOSP-001" />
+          </div>
+          <button class="btn-primary" id="save-profile-btn">
+            <span>Save Profile</span>
+            <div class="spinner hidden"></div>
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script type="module" src="medisense.js"></script>
+</body>
+</html>

@@ -33,7 +33,7 @@
   const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwuV2DRzMDDUM0eyOPFWQk3oYTtClWyr6AXmLKHH5sxXqaNt6nFf3N-Ktn0PCla8lGP/exec';
   // Example: 'https://script.google.com/macros/s/AKfycb.../exec'
 
-  const CONFIGURED = !SHEETS_WEBAPP_URL.includes('https://script.google.com/macros/s/AKfycbwuV2DRzMDDUM0eyOPFWQk3oYTtClWyr6AXmLKHH5sxXqaNt6nFf3N-Ktn0PCla8lGP/exec');
+  const CONFIGURED = !SHEETS_WEBAPP_URL.includes('YOUR_APPS_SCRIPT');
 
   // ──────────────────────────────────────────────────────────
   //  INTERNAL: post to Apps Script web app
@@ -222,4 +222,3 @@
 
 })(window);
 
-const SPREADSHEET_ID = '1Jl5TSwQs0CMdhKQe5lRYo1PsosSVb8Wyomxb6G_q_ic';

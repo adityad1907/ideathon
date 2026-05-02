@@ -1,28 +1,4 @@
-// ============================================================
-//  MediSense AI — medisense-sheets.js
-//  Google Sheets sync layer
-//
-//  HOW IT WORKS:
-//    localStorage (DB) stays as the primary fast store.
-//    Every write ALSO appends a row to Google Sheets.
-//    On load, it pulls ALL rows from Sheets and merges them
-//    into localStorage so data survives across devices.
-//
-//  SETUP (one-time, takes ~3 minutes):
-//    1. Open your Google Sheet
-//    2. Extensions → Apps Script
-//    3. Paste the Apps Script code from the bottom of this file
-//    4. Click Deploy → New deployment → Web app
-//       • Execute as: Me
-//       • Who has access: Anyone
-//    5. Copy the deployment URL
-//    6. Paste it below as SHEETS_WEBAPP_URL
-//
-//  SHEETS STRUCTURE (auto-created by Apps Script):
-//    Sheet "VitalSigns"  → all vitals rows
-//    Sheet "Users"       → registered users (no passwords)
-//    Sheet "LoginEvents" → login audit log
-// ============================================================
+
 
 (function (global) {
   'use strict';

@@ -1,20 +1,8 @@
-
-
 (function (global) {
   'use strict';
-
-  // ──────────────────────────────────────────────────────────
-  //  ⚠️  PASTE YOUR APPS SCRIPT WEB APP URL HERE
-  // ──────────────────────────────────────────────────────────
   const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwYBtziUkQCwiC74Y5Z4SEEVEeZw5hoco06cQhlqmIHZbmHz22SHJftcBkfSDhNjKQO/exec';
-  // Example: 'https://script.google.com/macros/s/AKfycb.../exec'
 
   const CONFIGURED = !SHEETS_WEBAPP_URL.includes('YOUR_APPS_SCRIPT');
-
-  // ──────────────────────────────────────────────────────────
-  //  INTERNAL: post to Apps Script web app
-  // ──────────────────────────────────────────────────────────
-  async function post(action, payload) {
     if (!CONFIGURED) {
       console.warn('[Sheets] Not configured — skipping sync. Paste your Apps Script URL in medisense-sheets.js');
       return { ok: false, error: 'not_configured' };
@@ -22,7 +10,6 @@
     try {
       const res = await fetch(SHEETS_WEBAPP_URL, {
         method:  'POST',
-        // Apps Script requires text/plain for no-cors workaround
         headers: { 'Content-Type': 'text/plain' },
         body:    JSON.stringify({ action, ...payload }),
       });
@@ -33,10 +20,6 @@
       return { ok: false, error: err.message };
     }
   }
-
-  // ──────────────────────────────────────────────────────────
-  //  INTERNAL: GET from Apps Script
-  // ──────────────────────────────────────────────────────────
   async function get(action, params = {}) {
     if (!CONFIGURED) return { ok: false, data: [] };
     try {
@@ -49,27 +32,15 @@
       return { ok: false, data: [] };
     }
   }
-
-  // ──────────────────────────────────────────────────────────
-  //  PUBLIC API
-  // ──────────────────────────────────────────────────────────
   const Sheets = {
 
     isConfigured() { return CONFIGURED; },
-
-    // ── VITALS ────────────────────────────────────────────
-
-    /** Append one vitals row to the VitalSigns sheet */
     async appendVital(row) {
       return post('appendVital', { row });
     },
-
-    /** Pull all vitals for a user and merge into localStorage */
     async syncVitals(userId) {
       const res = await get('getVitals', { userId });
       if (!res.ok || !res.data?.length) return [];
-
-      // Merge into local DB — skip rows already present (by id)
       const existing = new Set(DB.all('vital_signs').map(r => r.id));
       let added = 0;
       res.data.forEach(row => {
@@ -81,10 +52,6 @@
       if (added > 0) console.log(`[Sheets] Synced ${added} new vital(s) from Sheets`);
       return res.data;
     },
-
-    // ── USERS ─────────────────────────────────────────────
-
-    /** Push a new user record (no password hash) to the Users sheet */
     async appendUser(user) {
       return post('appendUser', {
         row: {
@@ -95,17 +62,13 @@
         },
       });
     },
-
-    /** Pull all users from Sheets and merge into localStorage */
     async syncUsers() {
       const res = await get('getUsers');
       if (!res.ok || !res.data?.length) return [];
       const existing = new Set(DB.all('users').map(r => r.id));
       let added = 0;
       res.data.forEach(row => {
-        // We only store email + name from Sheets (no password_hash)
         if (!existing.has(row.id)) {
-          // Only add if we truly don't have them locally
           const localUser = DB.find('users', u => u.email === row.email);
           if (!localUser) {
             DB.insert('users', { ...row, password_hash: '' });
@@ -116,10 +79,6 @@
       if (added > 0) console.log(`[Sheets] Synced ${added} new user(s) from Sheets`);
       return res.data;
     },
-
-    // ── LOGIN EVENTS ──────────────────────────────────────
-
-    /** Log a login event to the LoginEvents sheet */
     async logLogin(userId, email, method) {
       return post('appendLoginEvent', {
         row: {
@@ -132,10 +91,6 @@
         },
       });
     },
-
-    // ── FULL SYNC ─────────────────────────────────────────
-
-    /** Pull everything from Sheets and merge into local DB */
     async fullSync(userId) {
       if (!CONFIGURED) return;
       const [vitals] = await Promise.all([
@@ -147,8 +102,6 @@
   };
 
   global.Sheets = Sheets;
-
-  // Show a helpful banner if not configured
   if (!CONFIGURED) {
     window.addEventListener('DOMContentLoaded', () => {
       const b = document.createElement('div');
@@ -166,8 +119,6 @@
         <button onclick="this.parentElement.remove()" style="background:none;border:none;color:#64748B;cursor:pointer;font-size:16px">✕</button>
       `;
       document.body.appendChild(b);
-
-      // Setup modal
       const m = document.createElement('div');
       m.id = 'sheets-setup-modal';
       m.style.cssText = `

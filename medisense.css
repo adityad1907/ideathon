@@ -556,3 +556,66 @@ a:hover { text-decoration: underline; }
   .chat-panel { width: calc(100vw - 32px); right: -8px; }
   #ai-chat-widget { bottom: 16px; right: 16px; }
 }
+
+/* ═══════════════════════════════════════════════
+   ESP32 DEVICE VIEW STYLES
+   ═══════════════════════════════════════════════ */
+
+.esp32-status-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--rule, #e2e8f0);
+  border-radius: 14px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 1px 8px rgba(0,0,0,.05);
+}
+
+.esp32-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--ink, #0C1220);
+}
+
+.esp32-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #94A3B8;
+  flex-shrink: 0;
+  transition: background .3s;
+}
+.esp32-dot.connected   { background: #10B981; box-shadow: 0 0 0 4px rgba(16,185,129,.15); animation: esp32pulse 2s infinite; }
+.esp32-dot.connecting  { background: #F59E0B; animation: esp32pulse 1s infinite; }
+.esp32-dot.error       { background: #EF4444; }
+
+@keyframes esp32pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.6; transform:scale(.85); }
+}
+
+.esp32-detail {
+  font-size: 13px;
+  color: var(--ink-soft, #5A6A82);
+}
+
+.esp32-status-badge {
+  font-size: 9px !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: .04em;
+}
+
+/* patient name cell from previous fix */
+.patient-name-cell {
+  font-weight: 500;
+  color: #0EA5E9;
+  white-space: nowrap;
+}

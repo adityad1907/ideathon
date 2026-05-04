@@ -190,6 +190,11 @@
           Alerts
           <span class="badge" id="alert-badge">0</span>
         </a>
+        <a href="#" class="nav-item" data-view="esp32">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+          ESP32
+          <span class="badge esp32-status-badge" id="esp32-nav-badge" style="background:#64748B">OFF</span>
+        </a>
         <a href="#" class="nav-item" data-view="profile" id="doctor-only-nav" style="display:none">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           Profile
@@ -428,15 +433,105 @@
         </div>
       </div>
 
+      <!-- ══════════ ESP32 DEVICE VIEW ══════════ -->
+      <div id="view-esp32" class="view">
+        <div class="view-header">
+          <div>
+            <h2 class="view-title">ESP32 Device</h2>
+            <p class="view-sub" id="esp32-view-sub">Connect your ESP32 sensor board</p>
+          </div>
+          <div class="header-actions">
+            <span class="last-updated" id="esp32-last-ping">Never connected</span>
+            <button class="btn-sm" id="esp32-test-btn">Test Connection</button>
+          </div>
+        </div>
+
+        <!-- Status card -->
+        <div class="esp32-status-card" id="esp32-status-card">
+          <div class="esp32-indicator" id="esp32-indicator">
+            <div class="esp32-dot" id="esp32-dot"></div>
+            <span id="esp32-status-text">Disconnected</span>
+          </div>
+          <div class="esp32-detail" id="esp32-detail">No readings received yet</div>
+        </div>
+
+        <!-- Config card -->
+        <div class="form-card" style="margin-top:20px">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:16px;color:var(--ink)">⚙️ Bridge Server Config</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label>Bridge Server IP <small>(your PC's local IP)</small></label>
+              <input type="text" id="esp32-bridge-ip" placeholder="192.168.1.XXX" />
+            </div>
+            <div class="field">
+              <label>Bridge Port</label>
+              <input type="number" id="esp32-bridge-port" placeholder="3456" value="3456" />
+            </div>
+            <div class="field">
+              <label>Poll Interval <small>(seconds)</small></label>
+              <input type="number" id="esp32-poll-interval" placeholder="10" value="10" min="5" max="300" />
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn-primary" id="esp32-save-config-btn" style="max-width:180px">
+              <span>Save &amp; Connect</span>
+              <div class="spinner hidden"></div>
+            </button>
+            <button class="btn-sm" id="esp32-disconnect-btn" style="background:var(--rule);color:var(--ink-soft)">Disconnect</button>
+          </div>
+        </div>
+
+        <!-- Live readings card — shown when connected -->
+        <div class="form-card" id="esp32-live-card" style="margin-top:20px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <h3 style="font-size:15px;font-weight:600;color:var(--ink)">📡 Live Readings from ESP32</h3>
+            <span class="badge" id="esp32-reading-count" style="background:#10B981">0 received</span>
+          </div>
+          <div class="stats-grid" id="esp32-live-stats">
+            <div class="stat-card"><div class="stat-icon heart">❤️</div><div class="stat-info"><div class="stat-label">Heart Rate</div><div class="stat-val" id="esp32-hr">—<span> bpm</span></div></div></div>
+            <div class="stat-card"><div class="stat-icon spo2">💧</div><div class="stat-info"><div class="stat-label">SpO₂</div><div class="stat-val" id="esp32-spo2">—<span> %</span></div></div></div>
+            <div class="stat-card"><div class="stat-icon temp">🌡️</div><div class="stat-info"><div class="stat-label">Temperature</div><div class="stat-val" id="esp32-temp">—<span> °C</span></div></div></div>
+            <div class="stat-card"><div class="stat-icon bp">🔴</div><div class="stat-info"><div class="stat-label">Blood Pressure</div><div class="stat-val" id="esp32-bp">—<span> mmHg</span></div></div></div>
+            <div class="stat-card"><div class="stat-icon resp">🫁</div><div class="stat-info"><div class="stat-label">Resp. Rate</div><div class="stat-val" id="esp32-resp">—<span> /min</span></div></div></div>
+            <div class="stat-card"><div class="stat-icon glucose">🩸</div><div class="stat-info"><div class="stat-label">Blood Glucose</div><div class="stat-val" id="esp32-glucose">—<span> mg/dL</span></div></div></div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:12px">
+            <button class="btn-sm" id="esp32-save-reading-btn" style="background:#10B981;color:white;border-color:#10B981">💾 Save to Dashboard</button>
+            <span style="font-size:12px;color:var(--ink-soft);align-self:center" id="esp32-auto-save-label"></span>
+          </div>
+        </div>
+
+        <!-- Setup guide -->
+        <div class="form-card" style="margin-top:20px;background:#0F172A;color:#CBD5E1;border-color:#1E293B">
+          <h3 style="font-size:14px;font-weight:600;color:#F8FAFC;margin-bottom:14px">🛠 Setup Guide — 3 Steps</h3>
+          <div style="font-size:13px;line-height:1.9;color:#94A3B8">
+            <p style="margin-bottom:10px"><span style="color:#38BDF8;font-weight:600">Step 1 — Run the bridge</span><br>
+            Download <code id="esp32-dl-bridge" style="color:#7DD3FC;cursor:pointer;text-decoration:underline">esp32-bridge.js</code> → run <code style="color:#7DD3FC">node esp32-bridge.js</code> on your PC</p>
+            <p style="margin-bottom:10px"><span style="color:#38BDF8;font-weight:600">Step 2 — Flash ESP32</span><br>
+            Download <code id="esp32-dl-sketch" style="color:#7DD3FC;cursor:pointer;text-decoration:underline">MediSenseESP32.ino</code> → set WiFi + bridge IP → upload via Arduino IDE</p>
+            <p><span style="color:#38BDF8;font-weight:600">Step 3 — Connect here</span><br>
+            Enter your PC's local IP above → click <strong style="color:#F8FAFC">Save &amp; Connect</strong></p>
+          </div>
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid #1E293B">
+            <p style="font-size:11px;color:#475569">Your User ID (paste into the Arduino sketch):</p>
+            <code id="esp32-user-id-display" style="font-size:11px;color:#7DD3FC;word-break:break-all">—</code>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
   <script src="medisense-db.js"></script>
   <script src="medisense-sheets.js"></script>
   <script src="medisense.js"></script>
-  
+  <script src="esp32.js"></script>
+
+
+  <!-- Floating button -->
   <div id="ai-chat-widget">
     <button id="ai-chat-toggle" aria-label="Open AI Health Assistant">
+      <!-- Chat bubble icon (shown when closed) -->
       <svg id="chat-icon" width="26" height="26" viewBox="0 0 24 24" fill="none">
         <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.527 3.66 1.438 5.168L2.5 21.5l4.332-.938A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
           fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -444,13 +539,18 @@
         <circle cx="12"   cy="12" r="1.1" fill="currentColor"/>
         <circle cx="15.5" cy="12" r="1.1" fill="currentColor"/>
       </svg>
+      <!-- X icon (shown when open) -->
       <svg id="close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
         <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
       </svg>
+      <!-- Unread badge (disappears on open) -->
       <span id="chat-unread" class="chat-unread">1</span>
     </button>
+
+    <!-- Chat panel -->
     <div id="ai-chat-panel" class="chat-panel hidden">
-      
+
+      <!-- Header -->
       <div class="chat-header">
         <div class="chat-header-info">
           <div class="chat-avatar">
@@ -472,8 +572,10 @@
         </div>
       </div>
 
+      <!-- Messages -->
       <div id="chat-messages" class="chat-messages"></div>
 
+      <!-- Quick suggestion chips -->
       <div class="chat-suggestions" id="chat-suggestions">
         <button class="suggestion-chip" data-msg="Analyze my current vitals and tell me if anything looks concerning.">Analyze my vitals</button>
         <button class="suggestion-chip" data-msg="What is a normal heart rate range for adults?">Normal heart rate?</button>
@@ -482,6 +584,7 @@
         <button class="suggestion-chip" data-msg="Explain what blood glucose levels mean.">Blood glucose explained</button>
       </div>
 
+      <!-- Input bar -->
       <div class="chat-input-area">
         <textarea id="chat-input" placeholder="Ask anything about your health…" rows="1"></textarea>
         <button id="chat-send-btn" title="Send message" disabled>
@@ -492,14 +595,28 @@
       </div>
       <div class="chat-disclaimer">AI responses are informational only — not medical advice.</div>
 
-    </div>
-  </div>
+    </div><!-- /chat-panel -->
+  </div><!-- /ai-chat-widget -->
 
   <script>
+  // ════════════════════════════════════════════════════════
+  //  MEDISENSE — OPENAI CHAT WIDGET
+  //
+  //  HOW TO ACTIVATE:
+  //  1. Go to https://platform.openai.com/api-keys
+  //  2. Click "+ Create new secret key"
+  //  3. Replace YOUR_OPENAI_API_KEY below with your key
+  //
+  //  ⚠️  This sends your key from the browser (client-side).
+  //      Fine for local/demo use. For production, route
+  //      requests through your own backend server instead.
+  // ════════════════════════════════════════════════════════
   (function () {
     const API_KEY = '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'; // ← paste your key here
     const API_URL = 'https://api.openai.com/v1/chat/completions';
-    const MODEL   = 'gpt-4o-mini';
+    const MODEL   = 'gpt-4o-mini'; // options: gpt-4o-mini (fast/cheap), gpt-4o (smarter)
+
+    // ── DOM refs ────────────────────────────────────────
     const toggle    = document.getElementById('ai-chat-toggle');
     const panel     = document.getElementById('ai-chat-panel');
     const msgs      = document.getElementById('chat-messages');
@@ -511,11 +628,13 @@
     const closeIcon = document.getElementById('close-icon');
     const suggs     = document.getElementById('chat-suggestions');
 
-    let history = []; 
+    let history = []; // Claude message history
     let isOpen  = false;
     let isBusy  = false;
 
+    // ── Build greeting + initial bot message ──────────
     function initGreeting() {
+      // Access the global `state` from medisense.js
       const appState = (typeof state !== 'undefined') ? state : null;
       const name = appState?.user?.full_name
         || appState?.user?.email?.split('@')[0]
@@ -530,6 +649,7 @@
       appendBot(`${greeting} I'm your <strong>MediSense AI</strong> assistant, powered by ChatGPT.<br><br>${vitalsLine}<br><br>What would you like to know?`);
     }
 
+    // ── Build vitals context for Claude system prompt ─
     function buildVitalsContext() {
       const appState = (typeof state !== 'undefined') ? state : null;
       const v = appState?.vitals?.[0];
@@ -569,6 +689,7 @@ Guidelines:
 - If asked something unrelated to health/medicine, politely redirect`;
     }
 
+    // ── Open / close ─────────────────────────────────
     toggle.addEventListener('click', () => {
       isOpen = !isOpen;
       panel.classList.toggle('hidden', !isOpen);
@@ -582,8 +703,10 @@ Guidelines:
       }
     });
 
+    // Hide unread badge on open, show after 2s on first load
     setTimeout(() => { if (!isOpen) unread.style.display = 'flex'; }, 2000);
 
+    // ── Clear chat ───────────────────────────────────
     clearBtn.addEventListener('click', () => {
       history = [];
       msgs.innerHTML = '';
@@ -591,6 +714,7 @@ Guidelines:
       suggs.style.display = 'flex';
     });
 
+    // ── Suggestion chips ─────────────────────────────
     suggs.addEventListener('click', e => {
       const chip = e.target.closest('.suggestion-chip');
       if (!chip) return;
@@ -599,6 +723,7 @@ Guidelines:
       sendMessage();
     });
 
+    // ── Input handling ────────────────────────────────
     input.addEventListener('input', () => {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 100) + 'px';
@@ -609,6 +734,7 @@ Guidelines:
     });
     sendBtn.addEventListener('click', sendMessage);
 
+    // ── Core send logic ───────────────────────────────
     async function sendMessage() {
       const text = input.value.trim();
       if (!text || isBusy) return;
@@ -625,6 +751,7 @@ Guidelines:
       const typingEl = appendTyping();
 
       try {
+        // OpenAI expects system prompt as the first message in the array
         const messages = [
           { role: 'system', content: buildSystemPrompt() },
           ...history,
@@ -667,6 +794,8 @@ Guidelines:
       sendBtn.disabled = !input.value.trim();
       input.focus();
     }
+
+    // ── Render helpers ────────────────────────────────
     function appendUser(text) {
       const el = document.createElement('div');
       el.className = 'chat-msg user';
@@ -693,6 +822,7 @@ Guidelines:
       return el;
     }
 
+    // Minimal markdown → HTML (bold, italic, code, bullets, line breaks)
     function renderMarkdown(text) {
       return escHtml(text)
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')

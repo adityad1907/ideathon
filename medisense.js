@@ -1,12 +1,4 @@
-// ============================================================
-//  MediSense AI — medisense.js
-//  Application logic — requires medisense-db.js loaded first.
-//  DB, Session, and hashPassword are provided by medisense-db.js
-// ============================================================
 
-// ============================================================
-//  APP STATE
-// ============================================================
 const state = {
   user:        null,
   role:        null,   // 'doctor' | 'family'
@@ -16,9 +8,6 @@ const state = {
   otpSession:  null,   // { user, email, password }
 };
 
-// ============================================================
-//  DOM HELPERS
-// ============================================================
 const $ = id => document.getElementById(id);
 const qsa = sel => document.querySelectorAll(sel);
 
@@ -46,9 +35,6 @@ function showScreen(id) {
   if (target) target.classList.add('active');
 }
 
-// ============================================================
-//  BOOT — restore session on page load
-// ============================================================
 async function init() {
   const saved = Session.get();
   if (saved) {
@@ -67,9 +53,6 @@ async function loadUserRole() {
   }
 }
 
-// ============================================================
-//  SIGN-IN (Email + Password)
-// ============================================================
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email    = $('login-email').value.trim();
@@ -99,9 +82,6 @@ $('login-form').addEventListener('submit', async (e) => {
   await loadUserRole();
 });
 
-// ============================================================
-//  SIGN-UP
-// ============================================================
 $('signup-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name  = $('signup-name').value.trim();
@@ -130,7 +110,6 @@ $('signup-form').addEventListener('submit', async (e) => {
     user_id: newUser.id, full_name: name, created_at: new Date().toISOString(),
   });
 
-  // ── Sync new user to Google Sheets (no password sent) ──
   Sheets.appendUser(newUser).then(r => {
     if (r.ok) console.log('[Sheets] User synced ✓');
   });
@@ -149,22 +128,15 @@ window.resetSignupForm = function() {
   location.reload();
 };
 
-// ============================================================
-//  GOOGLE "OAUTH" — demo mode (no real OAuth without a server)
-// ============================================================
 $('google-btn').addEventListener('click', () => {
   showToast('Google login requires a server. Use email/password instead.', 'info');
 });
 
-// ============================================================
-//  OTP FLOW  (simulated — code shown in console)
-// ============================================================
 $('otp-link').addEventListener('click', (e) => {
   e.preventDefault(); showScreen('screen-otp');
 });
 $('back-from-otp').addEventListener('click', () => showScreen('screen-login'));
 
-// Step 1: verify credentials, store OTP locally
 $('otp-request-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email    = $('otp-email').value.trim();
@@ -184,7 +156,6 @@ $('otp-request-form').addEventListener('submit', async (e) => {
 
   state.otpSession = { user, email, password };
 
-  // Generate OTP and persist to local JSON store
   const code      = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -198,7 +169,6 @@ $('otp-request-form').addEventListener('submit', async (e) => {
   startResendTimer();
 });
 
-// Step 2: verify OTP digits
 $('verify-otp-btn').addEventListener('click', () => {
   const digits = Array.from(qsa('.otp-digit')).map(i => i.value).join('');
   if (digits.length < 6) { showToast('Enter all 6 digits', 'error'); return; }
@@ -230,7 +200,6 @@ $('verify-otp-btn').addEventListener('click', () => {
   loadUserRole();
 });
 
-// OTP digit auto-advance
 qsa('.otp-digit').forEach((input, i, all) => {
   input.addEventListener('input', () => {
     input.value = input.value.replace(/\D/g, '').slice(-1);
@@ -241,7 +210,6 @@ qsa('.otp-digit').forEach((input, i, all) => {
   });
 });
 
-// Resend OTP timer
 function startResendTimer() {
   const btn     = $('resend-otp-btn');
   const timerEl = $('resend-timer');
@@ -263,9 +231,6 @@ $('resend-otp-btn').addEventListener('click', () => {
   $('otp-request-form').dispatchEvent(new Event('submit'));
 });
 
-// ============================================================
-//  FORGOT PASSWORD — demo mode
-// ============================================================
 $('forgot-link').addEventListener('click', (e) => {
   e.preventDefault(); showScreen('screen-forgot');
 });
@@ -288,9 +253,6 @@ $('forgot-form').addEventListener('submit', (e) => {
   setTimeout(() => showScreen('screen-login'), 2500);
 });
 
-// ============================================================
-//  ROLE SELECTION
-// ============================================================
 qsa('[data-role]').forEach(btn => {
   btn.addEventListener('click', () => {
     const role = btn.dataset.role;
@@ -304,9 +266,6 @@ qsa('[data-role]').forEach(btn => {
   });
 });
 
-// ============================================================
-//  APP ENTRY
-// ============================================================
 function showAuthWrapper() {
   $('auth-wrapper').classList.remove('hidden');
   $('app').classList.add('hidden');
@@ -323,11 +282,10 @@ function enterApp() {
   const doctorNav = $('doctor-only-nav');
   if (doctorNav) doctorNav.style.display = state.role === 'doctor' ? 'flex' : 'none';
 
-  // ── Pull latest data from Google Sheets and merge locally ──
   if (Sheets.isConfigured()) {
     showToast('Syncing with Google Sheets…', 'info');
     Sheets.fullSync(state.user.id).then(() => {
-      loadVitals(); // re-render after sync
+      loadVitals(); 
       showToast('Synced with Google Sheets ✓', 'success');
     }).catch(() => {
       showToast('Sheets sync failed — using local data', 'info');
@@ -352,9 +310,6 @@ function setupUserUI() {
   $('profile-avatar-lg').textContent   = initial;
 }
 
-// ============================================================
-//  NAVIGATION
-// ============================================================
 function navigateTo(viewId) {
   qsa('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.view === viewId));
   qsa('.view').forEach(v  => v.classList.toggle('active', v.id === `view-${viewId}`));
@@ -373,9 +328,6 @@ $('menu-toggle').addEventListener('click', () => {
   $('sidebar').classList.toggle('open');
 });
 
-// ============================================================
-//  AUTH TABS (Login / Sign-up)
-// ============================================================
 qsa('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     qsa('.tab').forEach(t => t.classList.remove('active'));
@@ -386,7 +338,6 @@ qsa('.tab').forEach(tab => {
   });
 });
 
-// Password toggle
 qsa('.eye-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const input = $(btn.dataset.target);
@@ -394,9 +345,6 @@ qsa('.eye-btn').forEach(btn => {
   });
 });
 
-// ============================================================
-//  SIGN-OUT
-// ============================================================
 $('logout-btn').addEventListener('click', () => {
   Session.clear();
   state.user = null;
@@ -405,9 +353,6 @@ $('logout-btn').addEventListener('click', () => {
   showAuthWrapper();
 });
 
-// ============================================================
-//  VITALS — Load from local JSON store
-// ============================================================
 function loadVitals() {
   const all = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
     .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
@@ -476,7 +421,6 @@ function renderVitalsTable(tbodyId, vitals) {
   `).join('');
 }
 
-// ── Alerts ────────────────────────────────────────────────
 function checkAlerts() {
   state.alerts = [];
   const v = state.vitals[0];
@@ -520,7 +464,6 @@ function checkAlerts() {
   `).join('');
 }
 
-// ── Range checks ─────────────────────────────────────────
 const checkHR      = v => v < 50 || v > 120  ? { label: 'CRITICAL', cls: 'crit' } : v < 60 || v > 100 ? { label: 'WARNING', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 const checkSpO2    = v => v < 90             ? { label: 'CRITICAL', cls: 'crit' } : v < 95             ? { label: 'LOW', cls: 'warn' }     : { label: 'Normal', cls: 'ok' };
 const checkTemp    = v => v > 39.5 || v < 35 ? { label: 'CRITICAL', cls: 'crit' } : v > 37.5           ? { label: 'FEVER', cls: 'warn' }   : { label: 'Normal', cls: 'ok' };
@@ -528,9 +471,6 @@ const checkResp    = v => v < 8  || v > 30   ? { label: 'CRITICAL', cls: 'crit' 
 const checkGlucose = v => v < 50 || v > 400  ? { label: 'CRITICAL', cls: 'crit' } : v < 70 || v > 180  ? { label: 'WARNING', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 const checkBP      = (s, d) => s > 180 || d > 120 ? { label: 'CRISIS', cls: 'crit' } : s > 140 || d > 90 ? { label: 'HIGH', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 
-// ============================================================
-//  SAVE VITALS → local JSON store
-// ============================================================
 $('vitals-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const btn = $('save-vitals-btn');
@@ -547,7 +487,6 @@ $('vitals-form').addEventListener('submit', (e) => {
     blood_glucose: parseNum($('f-glucose').value),
   };
 
-  // Remove null fields (except required ones)
   const vitalsOnly = { ...payload };
   delete vitalsOnly.recorded_by;
   delete vitalsOnly.recorded_at;
@@ -560,7 +499,6 @@ $('vitals-form').addEventListener('submit', (e) => {
   setLoading(btn, true);
   const savedVital = DB.insert('vital_signs', payload);
 
-  // ── Sync to Google Sheets ──
   Sheets.appendVital(savedVital).then(r => {
     if (r.ok) console.log('[Sheets] Vital synced ✓');
     else      console.warn('[Sheets] Vital sync failed:', r.error);
@@ -606,9 +544,6 @@ $('clear-alerts-btn').addEventListener('click', () => {
   $('alerts-list').innerHTML = '<p class="empty-state">No alerts — all vitals within normal range ✓</p>';
 });
 
-// ============================================================
-//  AI INSIGHT
-// ============================================================
 $('get-insight-btn').addEventListener('click', async () => {
   const v = state.vitals[0];
   if (!v) { showToast('No vitals data available', 'error'); return; }
@@ -651,9 +586,6 @@ Vitals:
   btn.textContent = 'Generate →';
 });
 
-// ============================================================
-//  PROFILE — Save to local JSON store
-// ============================================================
 $('save-profile-btn').addEventListener('click', () => {
   const btn = $('save-profile-btn');
   setLoading(btn, true);
@@ -671,9 +603,6 @@ $('save-profile-btn').addEventListener('click', () => {
   showToast('Profile saved!', 'success');
 });
 
-// ============================================================
-//  AUDIT LOG
-// ============================================================
 function logLoginEvent(userId, method) {
   DB.insert('login_events', {
     user_id:     userId,
@@ -682,9 +611,6 @@ function logLoginEvent(userId, method) {
   });
 }
 
-// ============================================================
-//  UTILITIES
-// ============================================================
 function parseNum(val) {
   const n = parseFloat(val);
   return isNaN(n) ? null : n;

@@ -434,12 +434,9 @@
   <script src="medisense-db.js"></script>
   <script src="medisense-sheets.js"></script>
   <script src="medisense.js"></script>
-
-
-  <!-- Floating button -->
+  
   <div id="ai-chat-widget">
     <button id="ai-chat-toggle" aria-label="Open AI Health Assistant">
-      <!-- Chat bubble icon (shown when closed) -->
       <svg id="chat-icon" width="26" height="26" viewBox="0 0 24 24" fill="none">
         <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.527 3.66 1.438 5.168L2.5 21.5l4.332-.938A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
           fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
@@ -447,18 +444,13 @@
         <circle cx="12"   cy="12" r="1.1" fill="currentColor"/>
         <circle cx="15.5" cy="12" r="1.1" fill="currentColor"/>
       </svg>
-      <!-- X icon (shown when open) -->
       <svg id="close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
         <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
       </svg>
-      <!-- Unread badge (disappears on open) -->
       <span id="chat-unread" class="chat-unread">1</span>
     </button>
-
-    <!-- Chat panel -->
     <div id="ai-chat-panel" class="chat-panel hidden">
-
-      <!-- Header -->
+      
       <div class="chat-header">
         <div class="chat-header-info">
           <div class="chat-avatar">
@@ -480,10 +472,8 @@
         </div>
       </div>
 
-      <!-- Messages -->
       <div id="chat-messages" class="chat-messages"></div>
 
-      <!-- Quick suggestion chips -->
       <div class="chat-suggestions" id="chat-suggestions">
         <button class="suggestion-chip" data-msg="Analyze my current vitals and tell me if anything looks concerning.">Analyze my vitals</button>
         <button class="suggestion-chip" data-msg="What is a normal heart rate range for adults?">Normal heart rate?</button>
@@ -492,7 +482,6 @@
         <button class="suggestion-chip" data-msg="Explain what blood glucose levels mean.">Blood glucose explained</button>
       </div>
 
-      <!-- Input bar -->
       <div class="chat-input-area">
         <textarea id="chat-input" placeholder="Ask anything about your health…" rows="1"></textarea>
         <button id="chat-send-btn" title="Send message" disabled>
@@ -503,28 +492,14 @@
       </div>
       <div class="chat-disclaimer">AI responses are informational only — not medical advice.</div>
 
-    </div><!-- /chat-panel -->
-  </div><!-- /ai-chat-widget -->
+    </div>
+  </div>
 
   <script>
-  // ════════════════════════════════════════════════════════
-  //  MEDISENSE — OPENAI CHAT WIDGET
-  //
-  //  HOW TO ACTIVATE:
-  //  1. Go to https://platform.openai.com/api-keys
-  //  2. Click "+ Create new secret key"
-  //  3. Replace YOUR_OPENAI_API_KEY below with your key
-  //
-  //  ⚠️  This sends your key from the browser (client-side).
-  //      Fine for local/demo use. For production, route
-  //      requests through your own backend server instead.
-  // ════════════════════════════════════════════════════════
   (function () {
     const API_KEY = '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'; // ← paste your key here
     const API_URL = 'https://api.openai.com/v1/chat/completions';
-    const MODEL   = 'gpt-4o-mini'; // options: gpt-4o-mini (fast/cheap), gpt-4o (smarter)
-
-    // ── DOM refs ────────────────────────────────────────
+    const MODEL   = 'gpt-4o-mini';
     const toggle    = document.getElementById('ai-chat-toggle');
     const panel     = document.getElementById('ai-chat-panel');
     const msgs      = document.getElementById('chat-messages');
@@ -536,13 +511,11 @@
     const closeIcon = document.getElementById('close-icon');
     const suggs     = document.getElementById('chat-suggestions');
 
-    let history = []; // Claude message history
+    let history = []; 
     let isOpen  = false;
     let isBusy  = false;
 
-    // ── Build greeting + initial bot message ──────────
     function initGreeting() {
-      // Access the global `state` from medisense.js
       const appState = (typeof state !== 'undefined') ? state : null;
       const name = appState?.user?.full_name
         || appState?.user?.email?.split('@')[0]
@@ -557,7 +530,6 @@
       appendBot(`${greeting} I'm your <strong>MediSense AI</strong> assistant, powered by ChatGPT.<br><br>${vitalsLine}<br><br>What would you like to know?`);
     }
 
-    // ── Build vitals context for Claude system prompt ─
     function buildVitalsContext() {
       const appState = (typeof state !== 'undefined') ? state : null;
       const v = appState?.vitals?.[0];
@@ -597,7 +569,6 @@ Guidelines:
 - If asked something unrelated to health/medicine, politely redirect`;
     }
 
-    // ── Open / close ─────────────────────────────────
     toggle.addEventListener('click', () => {
       isOpen = !isOpen;
       panel.classList.toggle('hidden', !isOpen);
@@ -611,10 +582,8 @@ Guidelines:
       }
     });
 
-    // Hide unread badge on open, show after 2s on first load
     setTimeout(() => { if (!isOpen) unread.style.display = 'flex'; }, 2000);
 
-    // ── Clear chat ───────────────────────────────────
     clearBtn.addEventListener('click', () => {
       history = [];
       msgs.innerHTML = '';
@@ -622,7 +591,6 @@ Guidelines:
       suggs.style.display = 'flex';
     });
 
-    // ── Suggestion chips ─────────────────────────────
     suggs.addEventListener('click', e => {
       const chip = e.target.closest('.suggestion-chip');
       if (!chip) return;
@@ -631,7 +599,6 @@ Guidelines:
       sendMessage();
     });
 
-    // ── Input handling ────────────────────────────────
     input.addEventListener('input', () => {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 100) + 'px';
@@ -642,7 +609,6 @@ Guidelines:
     });
     sendBtn.addEventListener('click', sendMessage);
 
-    // ── Core send logic ───────────────────────────────
     async function sendMessage() {
       const text = input.value.trim();
       if (!text || isBusy) return;
@@ -659,7 +625,6 @@ Guidelines:
       const typingEl = appendTyping();
 
       try {
-        // OpenAI expects system prompt as the first message in the array
         const messages = [
           { role: 'system', content: buildSystemPrompt() },
           ...history,
@@ -702,8 +667,6 @@ Guidelines:
       sendBtn.disabled = !input.value.trim();
       input.focus();
     }
-
-    // ── Render helpers ────────────────────────────────
     function appendUser(text) {
       const el = document.createElement('div');
       el.className = 'chat-msg user';
@@ -730,7 +693,6 @@ Guidelines:
       return el;
     }
 
-    // Minimal markdown → HTML (bold, italic, code, bullets, line breaks)
     function renderMarkdown(text) {
       return escHtml(text)
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')

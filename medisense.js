@@ -1,24 +1,11 @@
-// ============================================================
-//  MediSense AI — medisense.js
-//  Application logic — requires medisense-db.js loaded first.
-//  DB, Session, and hashPassword are provided by medisense-db.js
-// ============================================================
-
-// ============================================================
-//  APP STATE
-// ============================================================
 const state = {
   user:        null,
-  role:        null,   // 'doctor' | 'family'
+  role:        null,   
   vitals:      [],
   alerts:      [],
   resendTimer: null,
-  otpSession:  null,   // { user, email, password }
+  otpSession:  null,   
 };
-
-// ============================================================
-//  DOM HELPERS
-// ============================================================
 const $ = id => document.getElementById(id);
 const qsa = sel => document.querySelectorAll(sel);
 
@@ -45,10 +32,6 @@ function showScreen(id) {
   const target = $(id);
   if (target) target.classList.add('active');
 }
-
-// ============================================================
-//  BOOT — restore session on page load
-// ============================================================
 async function init() {
   const saved = Session.get();
   if (saved) {
@@ -58,9 +41,7 @@ async function init() {
 }
 
 async function loadUserRole() {
-  // Always look up the session for the CURRENT user only
   const sessions = DB.filter('sessions', r => r.user_id === state.user.id);
-  // Sort by last_seen descending to get the most recent session
   sessions.sort((a, b) => (b.last_seen || '').localeCompare(a.last_seen || ''));
   const session = sessions[0] || null;
 
@@ -71,10 +52,6 @@ async function loadUserRole() {
     showScreen('screen-role');
   }
 }
-
-// ============================================================
-//  SIGN-IN (Email + Password)
-// ============================================================
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email    = $('login-email').value.trim();
@@ -99,14 +76,9 @@ $('login-form').addEventListener('submit', async (e) => {
   state.user = user;
   Session.set(user);
   logLoginEvent(user.id, 'email_password');
-  // role not known yet at login time — it's chosen on next screen; logged after role selection
   showToast('Signed in successfully!', 'success');
   await loadUserRole();
 });
-
-// ============================================================
-//  SIGN-UP
-// ============================================================
 $('signup-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name  = $('signup-name').value.trim();
@@ -134,9 +106,6 @@ $('signup-form').addEventListener('submit', async (e) => {
   DB.insert('user_profiles', {
     user_id: newUser.id, full_name: name, created_at: new Date().toISOString(),
   });
-
-  // ── Sync new user to Google Sheets (role sent after role selection) ──
-  // We store the user object so we can push it with role after the next screen
   state._pendingSheetUser = newUser;
 
   setLoading(btn, false);
@@ -152,23 +121,13 @@ window.resetSignupForm = function() {
   if (loginTab) loginTab.click();
   location.reload();
 };
-
-// ============================================================
-//  GOOGLE "OAUTH" — demo mode (no real OAuth without a server)
-// ============================================================
 $('google-btn').addEventListener('click', () => {
   showToast('Google login requires a server. Use email/password instead.', 'info');
 });
-
-// ============================================================
-//  OTP FLOW  (simulated — code shown in console)
-// ============================================================
 $('otp-link').addEventListener('click', (e) => {
   e.preventDefault(); showScreen('screen-otp');
 });
 $('back-from-otp').addEventListener('click', () => showScreen('screen-login'));
-
-// Step 1: verify credentials, store OTP locally
 $('otp-request-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email    = $('otp-email').value.trim();
@@ -187,8 +146,6 @@ $('otp-request-form').addEventListener('submit', async (e) => {
   }
 
   state.otpSession = { user, email, password };
-
-  // Generate OTP and persist to local JSON store
   const code      = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -201,8 +158,6 @@ $('otp-request-form').addEventListener('submit', async (e) => {
   $('otp-verify-section').classList.remove('hidden');
   startResendTimer();
 });
-
-// Step 2: verify OTP digits
 $('verify-otp-btn').addEventListener('click', () => {
   const digits = Array.from(qsa('.otp-digit')).map(i => i.value).join('');
   if (digits.length < 6) { showToast('Enter all 6 digits', 'error'); return; }
@@ -233,8 +188,6 @@ $('verify-otp-btn').addEventListener('click', () => {
   showToast('OTP verified! Signing in…', 'success');
   loadUserRole();
 });
-
-// OTP digit auto-advance
 qsa('.otp-digit').forEach((input, i, all) => {
   input.addEventListener('input', () => {
     input.value = input.value.replace(/\D/g, '').slice(-1);
@@ -244,8 +197,6 @@ qsa('.otp-digit').forEach((input, i, all) => {
     if (e.key === 'Backspace' && !input.value && i > 0) all[i - 1].focus();
   });
 });
-
-// Resend OTP timer
 function startResendTimer() {
   const btn     = $('resend-otp-btn');
   const timerEl = $('resend-timer');
@@ -266,10 +217,6 @@ function startResendTimer() {
 $('resend-otp-btn').addEventListener('click', () => {
   $('otp-request-form').dispatchEvent(new Event('submit'));
 });
-
-// ============================================================
-//  FORGOT PASSWORD — demo mode
-// ============================================================
 $('forgot-link').addEventListener('click', (e) => {
   e.preventDefault(); showScreen('screen-forgot');
 });
@@ -281,7 +228,6 @@ $('forgot-form').addEventListener('submit', (e) => {
   if (!email) { showToast('Enter your email address', 'error'); return; }
 
   const user = DB.find('users', u => u.email === email);
-  // Always show success message (don't leak whether email exists)
   const tempPass = Math.random().toString(36).slice(-8);
   if (user) {
     console.log(`%c🔑 Temporary password for ${email}: ${tempPass}`, 'font-size:15px;color:#0EA5E9;');
@@ -291,39 +237,25 @@ $('forgot-form').addEventListener('submit', (e) => {
   }
   setTimeout(() => showScreen('screen-login'), 2500);
 });
-
-// ============================================================
-//  ROLE SELECTION
-// ============================================================
 qsa('[data-role]').forEach(btn => {
   btn.addEventListener('click', () => {
     const role = btn.dataset.role;
     state.role = role;
-
-    // Remove any existing session for this user first, then insert fresh
     DB.remove('sessions', r => r.user_id === state.user.id);
     DB.insert('sessions', {
       user_id: state.user.id, role, last_seen: new Date().toISOString(),
     });
-
-    // Now that we know the role, push user to correct Sheets tab
     if (state._pendingSheetUser) {
       Sheets.appendUser(state._pendingSheetUser, role).then(r => {
         if (r.ok) console.log(`[Sheets] User synced to ${role === 'doctor' ? 'Doctors' : 'Patient'} sheet ✓`);
       });
       state._pendingSheetUser = null;
     }
-
-    // Log login event with role now known
     Sheets.logLogin(state.user.id, state.user.email, 'role_selected', role);
 
     enterApp();
   });
 });
-
-// ============================================================
-//  APP ENTRY
-// ============================================================
 function showAuthWrapper() {
   $('auth-wrapper').classList.remove('hidden');
   $('app').classList.add('hidden');
@@ -336,22 +268,16 @@ function enterApp() {
   setupUserUI();
   loadVitals();
   navigateTo('dashboard');
-
-  // Notify ESP32 module that user is logged in
   document.dispatchEvent(new CustomEvent('medisense:loggedin', { detail: state.user }));
 
   const doctorNav = $('doctor-only-nav');
   if (doctorNav) doctorNav.style.display = state.role === 'doctor' ? 'flex' : 'none';
-
-  // Update dashboard subtitle based on role
   const viewSub = document.querySelector('#view-dashboard .view-sub');
   if (viewSub) {
     viewSub.textContent = state.role === 'doctor'
       ? 'Showing all patients\' latest vitals'
       : 'Your personal vitals summary';
   }
-
-  // ── Pull latest data from Google Sheets and merge locally ──
   if (Sheets.isConfigured()) {
     showToast('Syncing with Google Sheets…', 'info');
     Sheets.fullSync(state.user.id, state.role).then(() => {
@@ -379,10 +305,6 @@ function setupUserUI() {
   if ($('p-email')) $('p-email').value = email;
   $('profile-avatar-lg').textContent   = initial;
 }
-
-// ============================================================
-//  NAVIGATION
-// ============================================================
 function navigateTo(viewId) {
   qsa('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.view === viewId));
   qsa('.view').forEach(v  => v.classList.toggle('active', v.id === `view-${viewId}`));
@@ -400,10 +322,6 @@ qsa('.nav-item').forEach(item => {
 $('menu-toggle').addEventListener('click', () => {
   $('sidebar').classList.toggle('open');
 });
-
-// ============================================================
-//  AUTH TABS (Login / Sign-up)
-// ============================================================
 qsa('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     qsa('.tab').forEach(t => t.classList.remove('active'));
@@ -413,18 +331,12 @@ qsa('.tab').forEach(tab => {
     $('signup-form').classList.toggle('hidden', which !== 'signup');
   });
 });
-
-// Password toggle
 qsa('.eye-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const input = $(btn.dataset.target);
     input.type = input.type === 'password' ? 'text' : 'password';
   });
 });
-
-// ============================================================
-//  SIGN-OUT
-// ============================================================
 $('logout-btn').addEventListener('click', () => {
   Session.clear();
   state.user = null;
@@ -432,20 +344,13 @@ $('logout-btn').addEventListener('click', () => {
   showToast('Signed out', 'info');
   showAuthWrapper();
 });
-
-// ============================================================
-//  VITALS — Load from local JSON store
-//  Doctors see ALL patients' vitals; family sees only their own.
-// ============================================================
 function loadVitals() {
   let all;
   if (state.role === 'doctor') {
-    // Doctors see every recorded vital, newest first
     all = DB.all('vital_signs')
       .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
       .slice(0, 50);
   } else {
-    // Family / patient sees only their own readings
     all = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
       .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
       .slice(0, 20);
@@ -508,7 +413,6 @@ function renderVitalsTable(tbodyId, vitals) {
   if (!tbody) return;
   const isDoctor = state.role === 'doctor';
 
-  // Update column headers dynamically
   const thead = tbody.closest('table')?.querySelector('thead tr');
   if (thead && isDoctor && !thead.querySelector('.patient-col')) {
     const th = document.createElement('th');
@@ -539,7 +443,6 @@ function renderVitalsTable(tbodyId, vitals) {
   `).join('');
 }
 
-// ── Alerts ────────────────────────────────────────────────
 function checkAlerts() {
   state.alerts = [];
   const v = state.vitals[0];
@@ -583,7 +486,6 @@ function checkAlerts() {
   `).join('');
 }
 
-// ── Range checks ─────────────────────────────────────────
 const checkHR      = v => v < 50 || v > 120  ? { label: 'CRITICAL', cls: 'crit' } : v < 60 || v > 100 ? { label: 'WARNING', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 const checkSpO2    = v => v < 90             ? { label: 'CRITICAL', cls: 'crit' } : v < 95             ? { label: 'LOW', cls: 'warn' }     : { label: 'Normal', cls: 'ok' };
 const checkTemp    = v => v > 39.5 || v < 35 ? { label: 'CRITICAL', cls: 'crit' } : v > 37.5           ? { label: 'FEVER', cls: 'warn' }   : { label: 'Normal', cls: 'ok' };
@@ -591,9 +493,6 @@ const checkResp    = v => v < 8  || v > 30   ? { label: 'CRITICAL', cls: 'crit' 
 const checkGlucose = v => v < 50 || v > 400  ? { label: 'CRITICAL', cls: 'crit' } : v < 70 || v > 180  ? { label: 'WARNING', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 const checkBP      = (s, d) => s > 180 || d > 120 ? { label: 'CRISIS', cls: 'crit' } : s > 140 || d > 90 ? { label: 'HIGH', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 
-// ============================================================
-//  SAVE VITALS → local JSON store
-// ============================================================
 $('vitals-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const btn = $('save-vitals-btn');
@@ -610,7 +509,6 @@ $('vitals-form').addEventListener('submit', (e) => {
     blood_glucose: parseNum($('f-glucose').value),
   };
 
-  // Remove null fields (except required ones)
   const vitalsOnly = { ...payload };
   delete vitalsOnly.recorded_by;
   delete vitalsOnly.recorded_at;
@@ -623,7 +521,6 @@ $('vitals-form').addEventListener('submit', (e) => {
   setLoading(btn, true);
   const savedVital = DB.insert('vital_signs', payload);
 
-  // ── Sync to Google Sheets (route to VitalSigns or Vitals based on role) ──
   Sheets.appendVital(savedVital, state.role).then(r => {
     if (r.ok) console.log(`[Sheets] Vital synced to ${state.role === 'doctor' ? 'VitalSigns' : 'Vitals'} ✓`);
     else      console.warn('[Sheets] Vital sync failed:', r.error);
@@ -676,9 +573,6 @@ $('clear-alerts-btn').addEventListener('click', () => {
   $('alerts-list').innerHTML = '<p class="empty-state">No alerts — all vitals within normal range ✓</p>';
 });
 
-// ============================================================
-//  AI INSIGHT
-// ============================================================
 $('get-insight-btn').addEventListener('click', async () => {
   const v = state.vitals[0];
   if (!v) { showToast('No vitals data available', 'error'); return; }
@@ -721,9 +615,6 @@ Vitals:
   btn.textContent = 'Generate →';
 });
 
-// ============================================================
-//  PROFILE — Save to local JSON store
-// ============================================================
 $('save-profile-btn').addEventListener('click', () => {
   const btn = $('save-profile-btn');
   setLoading(btn, true);
@@ -741,9 +632,6 @@ $('save-profile-btn').addEventListener('click', () => {
   showToast('Profile saved!', 'success');
 });
 
-// ============================================================
-//  AUDIT LOG
-// ============================================================
 function logLoginEvent(userId, method) {
   DB.insert('login_events', {
     user_id:     userId,
@@ -752,9 +640,6 @@ function logLoginEvent(userId, method) {
   });
 }
 
-// ============================================================
-//  UTILITIES
-// ============================================================
 function parseNum(val) {
   const n = parseFloat(val);
   return isNaN(n) ? null : n;
@@ -775,7 +660,4 @@ function timeAgo(iso) {
   return `${Math.floor(m / 60)}h ago`;
 }
 
-// ============================================================
-//  BOOT
-// ============================================================
 init();

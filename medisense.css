@@ -396,7 +396,6 @@ a:hover { text-decoration: underline; }
   .otp-digit { width: 38px; height: 46px; font-size: 1.1rem; }
 }
 
-/* ── AI CHAT WIDGET ─────────────────────────────────────── */
 #ai-chat-widget {
   position: fixed;
   bottom: 24px;
@@ -557,9 +556,6 @@ a:hover { text-decoration: underline; }
   #ai-chat-widget { bottom: 16px; right: 16px; }
 }
 
-/* ═══════════════════════════════════════════════
-   ESP32 DEVICE VIEW STYLES
-   ═══════════════════════════════════════════════ */
 
 .esp32-status-card {
   background: var(--card-bg, #fff);
@@ -613,7 +609,6 @@ a:hover { text-decoration: underline; }
   letter-spacing: .04em;
 }
 
-/* patient name cell from previous fix */
 .patient-name-cell {
   font-weight: 500;
   color: #0EA5E9;

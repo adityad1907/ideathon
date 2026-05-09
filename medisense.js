@@ -1,11 +1,29 @@
+// ============================================================
+//  MediSense AI — medisense.js
+//  Application logic — requires medisense-db.js loaded first.
+//  DB, Session, and hashPassword are provided by medisense-db.js
+// ============================================================
+
+// ============================================================
+//  SHEETS DIRECT URL
+// ============================================================
+const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwuV2DRzMDDUM0eyOPFWQk3oYTtClWyr6AXmLKHH5sxXqaNt6nFf3N-Ktn0PCla8lGP/exec';
+
+// ============================================================
+//  APP STATE
+// ============================================================
 const state = {
   user:        null,
-  role:        null,   
+  role:        null,   // 'doctor' | 'family'
   vitals:      [],
   alerts:      [],
   resendTimer: null,
-  otpSession:  null,   
+  otpSession:  null,   // { user, email, password }
 };
+
+// ============================================================
+//  DOM HELPERS
+// ============================================================
 const $ = id => document.getElementById(id);
 const qsa = sel => document.querySelectorAll(sel);
 
@@ -32,6 +50,10 @@ function showScreen(id) {
   const target = $(id);
   if (target) target.classList.add('active');
 }
+
+// ============================================================
+//  BOOT — restore session on page load
+// ============================================================
 async function init() {
   const saved = Session.get();
   if (saved) {
@@ -41,10 +63,7 @@ async function init() {
 }
 
 async function loadUserRole() {
-  const sessions = DB.filter('sessions', r => r.user_id === state.user.id);
-  sessions.sort((a, b) => (b.last_seen || '').localeCompare(a.last_seen || ''));
-  const session = sessions[0] || null;
-
+  const session = DB.find('sessions', r => r.user_id === state.user.id);
   if (session?.role) {
     state.role = session.role;
     enterApp();
@@ -52,6 +71,10 @@ async function loadUserRole() {
     showScreen('screen-role');
   }
 }
+
+// ============================================================
+//  SIGN-IN (Email + Password)
+// ============================================================
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email    = $('login-email').value.trim();
@@ -76,9 +99,14 @@ $('login-form').addEventListener('submit', async (e) => {
   state.user = user;
   Session.set(user);
   logLoginEvent(user.id, 'email_password');
+  Sheets.logLogin(user.id, user.email, 'email_password');
   showToast('Signed in successfully!', 'success');
   await loadUserRole();
 });
+
+// ============================================================
+//  SIGN-UP
+// ============================================================
 $('signup-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const name  = $('signup-name').value.trim();
@@ -106,7 +134,11 @@ $('signup-form').addEventListener('submit', async (e) => {
   DB.insert('user_profiles', {
     user_id: newUser.id, full_name: name, created_at: new Date().toISOString(),
   });
-  state._pendingSheetUser = newUser;
+
+  // ── Sync new user to Google Sheets (no password sent) ──
+  Sheets.appendUser(newUser).then(r => {
+    if (r.ok) console.log('[Sheets] User synced ✓');
+  });
 
   setLoading(btn, false);
 
@@ -121,13 +153,23 @@ window.resetSignupForm = function() {
   if (loginTab) loginTab.click();
   location.reload();
 };
+
+// ============================================================
+//  GOOGLE "OAUTH" — demo mode (no real OAuth without a server)
+// ============================================================
 $('google-btn').addEventListener('click', () => {
   showToast('Google login requires a server. Use email/password instead.', 'info');
 });
+
+// ============================================================
+//  OTP FLOW  (simulated — code shown in console)
+// ============================================================
 $('otp-link').addEventListener('click', (e) => {
   e.preventDefault(); showScreen('screen-otp');
 });
 $('back-from-otp').addEventListener('click', () => showScreen('screen-login'));
+
+// Step 1: verify credentials, store OTP locally
 $('otp-request-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email    = $('otp-email').value.trim();
@@ -146,6 +188,8 @@ $('otp-request-form').addEventListener('submit', async (e) => {
   }
 
   state.otpSession = { user, email, password };
+
+  // Generate OTP and persist to local JSON store
   const code      = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -158,6 +202,8 @@ $('otp-request-form').addEventListener('submit', async (e) => {
   $('otp-verify-section').classList.remove('hidden');
   startResendTimer();
 });
+
+// Step 2: verify OTP digits
 $('verify-otp-btn').addEventListener('click', () => {
   const digits = Array.from(qsa('.otp-digit')).map(i => i.value).join('');
   if (digits.length < 6) { showToast('Enter all 6 digits', 'error'); return; }
@@ -188,6 +234,8 @@ $('verify-otp-btn').addEventListener('click', () => {
   showToast('OTP verified! Signing in…', 'success');
   loadUserRole();
 });
+
+// OTP digit auto-advance
 qsa('.otp-digit').forEach((input, i, all) => {
   input.addEventListener('input', () => {
     input.value = input.value.replace(/\D/g, '').slice(-1);
@@ -197,6 +245,8 @@ qsa('.otp-digit').forEach((input, i, all) => {
     if (e.key === 'Backspace' && !input.value && i > 0) all[i - 1].focus();
   });
 });
+
+// Resend OTP timer
 function startResendTimer() {
   const btn     = $('resend-otp-btn');
   const timerEl = $('resend-timer');
@@ -217,6 +267,10 @@ function startResendTimer() {
 $('resend-otp-btn').addEventListener('click', () => {
   $('otp-request-form').dispatchEvent(new Event('submit'));
 });
+
+// ============================================================
+//  FORGOT PASSWORD — demo mode
+// ============================================================
 $('forgot-link').addEventListener('click', (e) => {
   e.preventDefault(); showScreen('screen-forgot');
 });
@@ -228,6 +282,7 @@ $('forgot-form').addEventListener('submit', (e) => {
   if (!email) { showToast('Enter your email address', 'error'); return; }
 
   const user = DB.find('users', u => u.email === email);
+  // Always show success message (don't leak whether email exists)
   const tempPass = Math.random().toString(36).slice(-8);
   if (user) {
     console.log(`%c🔑 Temporary password for ${email}: ${tempPass}`, 'font-size:15px;color:#0EA5E9;');
@@ -237,25 +292,26 @@ $('forgot-form').addEventListener('submit', (e) => {
   }
   setTimeout(() => showScreen('screen-login'), 2500);
 });
+
+// ============================================================
+//  ROLE SELECTION
+// ============================================================
 qsa('[data-role]').forEach(btn => {
   btn.addEventListener('click', () => {
     const role = btn.dataset.role;
     state.role = role;
-    DB.remove('sessions', r => r.user_id === state.user.id);
-    DB.insert('sessions', {
+
+    DB.upsert('sessions', {
       user_id: state.user.id, role, last_seen: new Date().toISOString(),
-    });
-    if (state._pendingSheetUser) {
-      Sheets.appendUser(state._pendingSheetUser, role).then(r => {
-        if (r.ok) console.log(`[Sheets] User synced to ${role === 'doctor' ? 'Doctors' : 'Patient'} sheet ✓`);
-      });
-      state._pendingSheetUser = null;
-    }
-    Sheets.logLogin(state.user.id, state.user.email, 'role_selected', role);
+    }, 'user_id');
 
     enterApp();
   });
 });
+
+// ============================================================
+//  APP ENTRY
+// ============================================================
 function showAuthWrapper() {
   $('auth-wrapper').classList.remove('hidden');
   $('app').classList.add('hidden');
@@ -268,25 +324,16 @@ function enterApp() {
   setupUserUI();
   loadVitals();
   navigateTo('dashboard');
-  document.dispatchEvent(new CustomEvent('medisense:loggedin', { detail: state.user }));
 
   const doctorNav = $('doctor-only-nav');
   if (doctorNav) doctorNav.style.display = state.role === 'doctor' ? 'flex' : 'none';
-  const viewSub = document.querySelector('#view-dashboard .view-sub');
-  if (viewSub) {
-    viewSub.textContent = state.role === 'doctor'
-      ? 'Showing all patients\' latest vitals'
-      : 'Your personal vitals summary';
-  }
-  if (Sheets.isConfigured()) {
-    showToast('Syncing with Google Sheets…', 'info');
-    Sheets.fullSync(state.user.id, state.role).then(() => {
-      loadVitals();
-      showToast('Synced with Google Sheets ✓', 'success');
-    }).catch(() => {
-      showToast('Sheets sync failed — using local data', 'info');
-    });
-  }
+
+  // ── Auto-refresh vitals from Sheets every 30 seconds ──
+  if (window._vitalsInterval) clearInterval(window._vitalsInterval);
+  window._vitalsInterval = setInterval(() => {
+    loadVitals();
+    console.log('[MediSense] Auto-refreshed vitals from Sheets');
+  }, 30_000);
 }
 
 function setupUserUI() {
@@ -305,6 +352,10 @@ function setupUserUI() {
   if ($('p-email')) $('p-email').value = email;
   $('profile-avatar-lg').textContent   = initial;
 }
+
+// ============================================================
+//  NAVIGATION
+// ============================================================
 function navigateTo(viewId) {
   qsa('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.view === viewId));
   qsa('.view').forEach(v  => v.classList.toggle('active', v.id === `view-${viewId}`));
@@ -322,6 +373,10 @@ qsa('.nav-item').forEach(item => {
 $('menu-toggle').addEventListener('click', () => {
   $('sidebar').classList.toggle('open');
 });
+
+// ============================================================
+//  AUTH TABS (Login / Sign-up)
+// ============================================================
 qsa('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
     qsa('.tab').forEach(t => t.classList.remove('active'));
@@ -331,32 +386,59 @@ qsa('.tab').forEach(tab => {
     $('signup-form').classList.toggle('hidden', which !== 'signup');
   });
 });
+
+// Password toggle
 qsa('.eye-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const input = $(btn.dataset.target);
     input.type = input.type === 'password' ? 'text' : 'password';
   });
 });
+
+// ============================================================
+//  SIGN-OUT
+// ============================================================
 $('logout-btn').addEventListener('click', () => {
+  if (window._vitalsInterval) clearInterval(window._vitalsInterval);
   Session.clear();
   state.user = null;
   state.role = null;
   showToast('Signed out', 'info');
   showAuthWrapper();
 });
-function loadVitals() {
-  let all;
-  if (state.role === 'doctor') {
-    all = DB.all('vital_signs')
-      .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
-      .slice(0, 50);
-  } else {
-    all = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
+
+// ============================================================
+//  VITALS — Fetch directly from Google Sheets (no localStorage sync)
+// ============================================================
+async function loadVitals() {
+  try {
+    // Build URL — doctors get all vitals, family get only their own
+    const role   = state.role || 'family';
+    const userId = state.user?.id || '';
+    const url    = `${SHEETS_WEBAPP_URL}?action=getVitals&role=${role}&userId=${userId}`;
+
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.ok && data.data?.length) {
+      state.vitals = data.data
+        .filter(v => role === 'doctor' || String(v.recorded_by) === String(userId))
+        .sort((a, b) => String(b.recorded_at).localeCompare(String(a.recorded_at)))
+        .slice(0, 20);
+    } else {
+      // Fallback to localStorage if Sheets returns nothing
+      state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
+        .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
+        .slice(0, 20);
+    }
+  } catch (err) {
+    console.warn('[Vitals] Sheets fetch failed, using local data:', err.message);
+    // Fallback to localStorage on network error
+    state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
       .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
       .slice(0, 20);
   }
 
-  state.vitals = all;
   renderDashboardStats();
   renderVitalsTable('vitals-tbody', state.vitals.slice(0, 5));
   checkAlerts();
@@ -365,7 +447,9 @@ function loadVitals() {
   if (lastEl && state.vitals.length > 0) {
     lastEl.textContent = 'Updated ' + timeAgo(state.vitals[0].recorded_at);
   }
-  $('readings-count').textContent = state.vitals.length;
+  if ($('readings-count')) {
+    $('readings-count').textContent = state.vitals.length;
+  }
 }
 
 function renderDashboardStats() {
@@ -399,39 +483,15 @@ function applyStatus(elId, { label, cls }) {
   el.className = `stat-status ${cls}`;
 }
 
-function getPatientName(userId) {
-  if (userId === state.user.id) return 'You';
-  const user = DB.find('users', u => u.id === userId);
-  if (user) return user.full_name || user.email.split('@')[0];
-  const profile = DB.find('user_profiles', p => p.user_id === userId);
-  if (profile) return profile.full_name || '—';
-  return 'Unknown';
-}
-
 function renderVitalsTable(tbodyId, vitals) {
   const tbody = $(tbodyId);
   if (!tbody) return;
-  const isDoctor = state.role === 'doctor';
-
-  const thead = tbody.closest('table')?.querySelector('thead tr');
-  if (thead && isDoctor && !thead.querySelector('.patient-col')) {
-    const th = document.createElement('th');
-    th.className = 'patient-col';
-    th.textContent = 'Patient';
-    thead.insertBefore(th, thead.firstChild);
-  } else if (thead && !isDoctor) {
-    const existing = thead.querySelector('.patient-col');
-    if (existing) existing.remove();
-  }
-
   if (!vitals.length) {
-    const cols = isDoctor ? 8 : 7;
-    tbody.innerHTML = `<tr><td colspan="${cols}" class="empty-row">No readings yet</td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No readings yet</td></tr>';
     return;
   }
   tbody.innerHTML = vitals.map(v => `
     <tr>
-      ${isDoctor ? `<td class="patient-name-cell">${getPatientName(v.recorded_by)}</td>` : ''}
       <td>${formatTime(v.recorded_at)}</td>
       <td>${v.heart_rate ?? '—'}</td>
       <td>${v.spo2 ?? '—'}</td>
@@ -443,6 +503,7 @@ function renderVitalsTable(tbodyId, vitals) {
   `).join('');
 }
 
+// ── Alerts ────────────────────────────────────────────────
 function checkAlerts() {
   state.alerts = [];
   const v = state.vitals[0];
@@ -486,6 +547,7 @@ function checkAlerts() {
   `).join('');
 }
 
+// ── Range checks ─────────────────────────────────────────
 const checkHR      = v => v < 50 || v > 120  ? { label: 'CRITICAL', cls: 'crit' } : v < 60 || v > 100 ? { label: 'WARNING', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 const checkSpO2    = v => v < 90             ? { label: 'CRITICAL', cls: 'crit' } : v < 95             ? { label: 'LOW', cls: 'warn' }     : { label: 'Normal', cls: 'ok' };
 const checkTemp    = v => v > 39.5 || v < 35 ? { label: 'CRITICAL', cls: 'crit' } : v > 37.5           ? { label: 'FEVER', cls: 'warn' }   : { label: 'Normal', cls: 'ok' };
@@ -493,6 +555,9 @@ const checkResp    = v => v < 8  || v > 30   ? { label: 'CRITICAL', cls: 'crit' 
 const checkGlucose = v => v < 50 || v > 400  ? { label: 'CRITICAL', cls: 'crit' } : v < 70 || v > 180  ? { label: 'WARNING', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 const checkBP      = (s, d) => s > 180 || d > 120 ? { label: 'CRISIS', cls: 'crit' } : s > 140 || d > 90 ? { label: 'HIGH', cls: 'warn' } : { label: 'Normal', cls: 'ok' };
 
+// ============================================================
+//  SAVE VITALS → local JSON store
+// ============================================================
 $('vitals-form').addEventListener('submit', (e) => {
   e.preventDefault();
   const btn = $('save-vitals-btn');
@@ -509,6 +574,7 @@ $('vitals-form').addEventListener('submit', (e) => {
     blood_glucose: parseNum($('f-glucose').value),
   };
 
+  // Remove null fields (except required ones)
   const vitalsOnly = { ...payload };
   delete vitalsOnly.recorded_by;
   delete vitalsOnly.recorded_at;
@@ -521,8 +587,9 @@ $('vitals-form').addEventListener('submit', (e) => {
   setLoading(btn, true);
   const savedVital = DB.insert('vital_signs', payload);
 
-  Sheets.appendVital(savedVital, state.role).then(r => {
-    if (r.ok) console.log(`[Sheets] Vital synced to ${state.role === 'doctor' ? 'VitalSigns' : 'Vitals'} ✓`);
+  // ── Sync to Google Sheets ──
+  Sheets.appendVital(savedVital).then(r => {
+    if (r.ok) console.log('[Sheets] Vital synced ✓');
     else      console.warn('[Sheets] Vital sync failed:', r.error);
   });
 
@@ -534,18 +601,34 @@ $('vitals-form').addEventListener('submit', (e) => {
   navigateTo('dashboard');
 });
 
-function loadHistory() {
-  let all;
-  if (state.role === 'doctor') {
-    all = DB.all('vital_signs')
+async function loadHistory() {
+  try {
+    const role   = state.role || 'family';
+    const userId = state.user?.id || '';
+    const url    = `${SHEETS_WEBAPP_URL}?action=getVitals&role=${role}&userId=${userId}`;
+    const res    = await fetch(url);
+    const data   = await res.json();
+
+    if (data.ok && data.data?.length) {
+      const all = data.data
+        .filter(v => role === 'doctor' || String(v.recorded_by) === String(userId))
+        .sort((a, b) => String(b.recorded_at).localeCompare(String(a.recorded_at)))
+        .slice(0, 100);
+      renderVitalsTable('history-tbody', all);
+    } else {
+      // Fallback to localStorage
+      const all = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
+        .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
+        .slice(0, 100);
+      renderVitalsTable('history-tbody', all);
+    }
+  } catch (err) {
+    console.warn('[History] Sheets fetch failed, using local data:', err.message);
+    const all = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
       .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
       .slice(0, 100);
-  } else {
-    all = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
-      .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
-      .slice(0, 100);
+    renderVitalsTable('history-tbody', all);
   }
-  renderVitalsTable('history-tbody', all);
 }
 
 $('export-btn').addEventListener('click', () => {
@@ -573,6 +656,9 @@ $('clear-alerts-btn').addEventListener('click', () => {
   $('alerts-list').innerHTML = '<p class="empty-state">No alerts — all vitals within normal range ✓</p>';
 });
 
+// ============================================================
+//  AI INSIGHT
+// ============================================================
 $('get-insight-btn').addEventListener('click', async () => {
   const v = state.vitals[0];
   if (!v) { showToast('No vitals data available', 'error'); return; }
@@ -615,6 +701,9 @@ Vitals:
   btn.textContent = 'Generate →';
 });
 
+// ============================================================
+//  PROFILE — Save to local JSON store
+// ============================================================
 $('save-profile-btn').addEventListener('click', () => {
   const btn = $('save-profile-btn');
   setLoading(btn, true);
@@ -632,6 +721,9 @@ $('save-profile-btn').addEventListener('click', () => {
   showToast('Profile saved!', 'success');
 });
 
+// ============================================================
+//  AUDIT LOG
+// ============================================================
 function logLoginEvent(userId, method) {
   DB.insert('login_events', {
     user_id:     userId,
@@ -640,6 +732,9 @@ function logLoginEvent(userId, method) {
   });
 }
 
+// ============================================================
+//  UTILITIES
+// ============================================================
 function parseNum(val) {
   const n = parseFloat(val);
   return isNaN(n) ? null : n;
@@ -660,4 +755,7 @@ function timeAgo(iso) {
   return `${Math.floor(m / 60)}h ago`;
 }
 
+// ============================================================
+//  BOOT
+// ============================================================
 init();

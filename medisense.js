@@ -299,12 +299,21 @@ $('forgot-form').addEventListener('submit', (e) => {
 qsa('[data-role]').forEach(btn => {
   btn.addEventListener('click', () => {
     const role = btn.dataset.role;
-    state.role = role;
 
+    // ── Admin password gate ──────────────────────────────
+    if (role === 'admin') {
+      const entered = prompt('🛡️ Enter Admin Password:');
+      if (entered === null) return; // cancelled
+      if (entered !== 'medisense') {
+        showToast('Incorrect admin password', 'error');
+        return;
+      }
+    }
+
+    state.role = role;
     DB.upsert('sessions', {
       user_id: state.user.id, role, last_seen: new Date().toISOString(),
     }, 'user_id');
-
     enterApp();
   });
 });

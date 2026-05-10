@@ -322,18 +322,26 @@ function enterApp() {
   $('auth-wrapper').classList.add('hidden');
   $('app').classList.remove('hidden');
   setupUserUI();
-  loadVitals();
   navigateTo('dashboard');
 
+  // Show/hide role-specific nav items
   const doctorNav = $('doctor-only-nav');
+  const adminNav  = $('admin-only-nav');
   if (doctorNav) doctorNav.style.display = state.role === 'doctor' ? 'flex' : 'none';
+  if (adminNav)  adminNav.style.display  = state.role === 'admin'  ? 'flex' : 'none';
 
-  // ── Auto-refresh vitals from Sheets every 30 seconds ──
-  if (window._vitalsInterval) clearInterval(window._vitalsInterval);
-  window._vitalsInterval = setInterval(() => {
+  // Admin goes straight to admin panel, others load vitals
+  if (state.role === 'admin') {
+    navigateTo('admin');
+  } else {
     loadVitals();
-    console.log('[MediSense] Auto-refreshed vitals from Sheets');
-  }, 30_000);
+    // Auto-refresh vitals from Sheets every 30 seconds
+    if (window._vitalsInterval) clearInterval(window._vitalsInterval);
+    window._vitalsInterval = setInterval(() => {
+      loadVitals();
+      console.log('[MediSense] Auto-refreshed vitals from Sheets');
+    }, 30_000);
+  }
 }
 
 function setupUserUI() {
@@ -360,6 +368,7 @@ function navigateTo(viewId) {
   qsa('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.view === viewId));
   qsa('.view').forEach(v  => v.classList.toggle('active', v.id === `view-${viewId}`));
   if (viewId === 'history') loadHistory();
+  if (viewId === 'admin')   loadAdminPanel();
 }
 
 qsa('.nav-item').forEach(item => {
@@ -396,6 +405,149 @@ qsa('.eye-btn').forEach(btn => {
 });
 
 // ============================================================
+//  PATIENT-DOCTOR ASSIGNMENT SYSTEM
+// ============================================================
+
+/** Assign a patient to a doctor (removes any existing assignment first) */
+function assignPatientToDoctor(doctorId, patientId) {
+  DB.remove('assignments', a => a.patient_id === patientId);
+  const assignment = DB.insert('assignments', {
+    doctor_id:   doctorId,
+    patient_id:  patientId,
+    assigned_at: new Date().toISOString(),
+  });
+  // Sync to Sheets
+  if (Sheets.isConfigured()) {
+    Sheets.appendAssignment && Sheets.appendAssignment(assignment);
+  }
+  return assignment;
+}
+
+/** Get all patients assigned to a specific doctor */
+function getPatientsForDoctor(doctorId) {
+  const assignments = DB.filter('assignments', a => a.doctor_id === doctorId);
+  return assignments.map(a => DB.find('users', u => u.id === a.patient_id)).filter(Boolean);
+}
+
+/** Render the admin panel */
+async function loadAdminPanel() {
+  const allUsers    = DB.all('users');
+  const allSessions = DB.all('sessions');
+
+  // Separate doctors and patients by their saved session role
+  const doctors  = allUsers.filter(u => allSessions.find(s => s.user_id === u.id && s.role === 'doctor'));
+  const patients = allUsers.filter(u => allSessions.find(s => s.user_id === u.id && s.role === 'family'));
+
+  // Also pull from Sheets if configured
+  if (Sheets.isConfigured()) {
+    try {
+      const res = await fetch(`${SHEETS_WEBAPP_URL}?action=getUsers`);
+      const data = await res.json();
+      if (data.ok && data.data?.length) {
+        data.data.forEach(u => {
+          if (!DB.find('users', r => r.id === u.id)) {
+            DB.insert('users', { ...u, password_hash: '' });
+          }
+        });
+      }
+    } catch (e) { /* silently skip */ }
+  }
+
+  const assignments = DB.all('assignments');
+
+  // ── Render patients table ────────────────────────────────
+  const patientsTbody = $('admin-patients-tbody');
+  if (patientsTbody) {
+    if (!patients.length) {
+      patientsTbody.innerHTML = `<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--ink-soft)">No patients registered yet — patients register with Family role</td></tr>`;
+    } else {
+      patientsTbody.innerHTML = patients.map(p => {
+        const assignment = assignments.find(a => a.patient_id === p.id);
+        const doctor     = assignment ? DB.find('users', u => u.id === assignment.doctor_id) : null;
+        const docLabel   = doctor
+          ? `<span style="color:var(--accent)">${doctor.full_name}</span>`
+          : `<span style="color:var(--ink-soft)">Unassigned</span>`;
+        return `
+          <tr style="border-bottom:1px solid var(--rule)">
+            <td style="padding:10px 12px;color:var(--ink);font-weight:500">${p.full_name}</td>
+            <td style="padding:10px 12px;color:var(--ink-soft)">${p.email}</td>
+            <td style="padding:10px 12px">${docLabel}</td>
+            <td style="padding:10px 12px">
+              <button class="btn-sm assign-btn" data-patient-id="${p.id}" data-patient-name="${p.full_name}"
+                style="font-size:12px;padding:4px 12px">
+                ${assignment ? 'Reassign' : 'Assign →'}
+              </button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+  }
+
+  // ── Render doctors table ─────────────────────────────────
+  const doctorsTbody = $('admin-doctors-tbody');
+  if (doctorsTbody) {
+    if (!doctors.length) {
+      doctorsTbody.innerHTML = `<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--ink-soft)">No doctors registered yet — doctors register with Doctor role</td></tr>`;
+    } else {
+      doctorsTbody.innerHTML = doctors.map(d => {
+        const count = assignments.filter(a => a.doctor_id === d.id).length;
+        return `
+          <tr style="border-bottom:1px solid var(--rule)">
+            <td style="padding:10px 12px;color:var(--ink);font-weight:500">${d.full_name}</td>
+            <td style="padding:10px 12px;color:var(--ink-soft)">${d.email}</td>
+            <td style="padding:10px 12px">
+              <span style="background:var(--rule);padding:2px 10px;border-radius:20px;font-size:12px;color:var(--ink)">
+                ${count} patient${count !== 1 ? 's' : ''}
+              </span>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+  }
+
+  // ── Bind assign buttons ──────────────────────────────────
+  let currentPatientId   = null;
+  let currentPatientName = null;
+
+  qsa('.assign-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentPatientId   = btn.dataset.patientId;
+      currentPatientName = btn.dataset.patientName;
+
+      $('assign-patient-label').textContent = `Patient: ${currentPatientName}`;
+
+      // Populate doctor dropdown
+      const sel = $('assign-doctor-select');
+      sel.innerHTML = '<option value="">— Select a doctor —</option>' +
+        doctors.map(d => `<option value="${d.id}">${d.full_name}</option>`).join('');
+
+      // Pre-select current doctor if assigned
+      const existing = assignments.find(a => a.patient_id === currentPatientId);
+      if (existing) sel.value = existing.doctor_id;
+
+      $('assign-modal').style.display = 'flex';
+    });
+  });
+
+  $('assign-confirm-btn').onclick = () => {
+    const doctorId = $('assign-doctor-select').value;
+    if (!doctorId) { showToast('Please select a doctor', 'error'); return; }
+    assignPatientToDoctor(doctorId, currentPatientId);
+    $('assign-modal').style.display = 'none';
+    showToast(`${currentPatientName} assigned successfully ✓`, 'success');
+    loadAdminPanel(); // re-render
+  };
+
+  $('assign-cancel-btn').onclick = () => {
+    $('assign-modal').style.display = 'none';
+  };
+
+  // Refresh button
+  const refreshBtn = $('admin-refresh-btn');
+  if (refreshBtn) refreshBtn.onclick = loadAdminPanel;
+}
+
+// ============================================================
 //  SIGN-OUT
 // ============================================================
 $('logout-btn').addEventListener('click', () => {
@@ -411,8 +563,9 @@ $('logout-btn').addEventListener('click', () => {
 //  VITALS — Fetch directly from Google Sheets (no localStorage sync)
 // ============================================================
 async function loadVitals() {
+  if (state.role === 'admin') return; // admin uses admin panel, not vitals
+
   try {
-    // Build URL — doctors get all vitals, family get only their own
     const role   = state.role || 'family';
     const userId = state.user?.id || '';
     const url    = `${SHEETS_WEBAPP_URL}?action=getVitals&role=${role}&userId=${userId}`;
@@ -421,19 +574,32 @@ async function loadVitals() {
     const data = await res.json();
 
     if (data.ok && data.data?.length) {
-      state.vitals = data.data
-        .filter(v => role === 'doctor' || String(v.recorded_by) === String(userId))
-        .sort((a, b) => String(b.recorded_at).localeCompare(String(a.recorded_at)))
-        .slice(0, 20);
+      let vitals = data.data.sort((a, b) =>
+        String(b.recorded_at).localeCompare(String(a.recorded_at)));
+
+      if (role === 'doctor') {
+        // Filter to only assigned patients
+        const myPatients   = getPatientsForDoctor(userId);
+        const myPatientIds = new Set(myPatients.map(p => p.id));
+
+        // If no assignments yet, show all (so doctor isn't locked out)
+        if (myPatientIds.size > 0) {
+          vitals = vitals.filter(v => myPatientIds.has(String(v.recorded_by)));
+        }
+      } else {
+        // Family/patient sees only their own
+        vitals = vitals.filter(v => String(v.recorded_by) === String(userId));
+      }
+
+      state.vitals = vitals.slice(0, 20);
     } else {
-      // Fallback to localStorage if Sheets returns nothing
+      // Fallback to localStorage
       state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
         .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
         .slice(0, 20);
     }
   } catch (err) {
     console.warn('[Vitals] Sheets fetch failed, using local data:', err.message);
-    // Fallback to localStorage on network error
     state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
       .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
       .slice(0, 20);

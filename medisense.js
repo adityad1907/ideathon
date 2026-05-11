@@ -682,54 +682,6 @@ async function loadVitals() {
   }
 }
 
-    const res  = await fetch(url);
-    const data = await res.json();
-
-    if (data.ok && data.data?.length) {
-      let vitals = data.data.sort((a, b) =>
-        String(b.recorded_at).localeCompare(String(a.recorded_at)));
-
-      if (role === 'doctor') {
-        // Filter to only assigned patients
-        const myPatients   = getPatientsForDoctor(userId);
-        const myPatientIds = new Set(myPatients.map(p => p.id));
-
-        // If no assignments yet, show all (so doctor isn't locked out)
-        if (myPatientIds.size > 0) {
-          vitals = vitals.filter(v => myPatientIds.has(String(v.recorded_by)));
-        }
-      } else {
-        // Family/patient sees only their own
-        vitals = vitals.filter(v => String(v.recorded_by) === String(userId));
-      }
-
-      state.vitals = vitals.slice(0, 20);
-    } else {
-      // Fallback to localStorage
-      state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
-        .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
-        .slice(0, 20);
-    }
-  } catch (err) {
-    console.warn('[Vitals] Sheets fetch failed, using local data:', err.message);
-    state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
-      .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
-      .slice(0, 20);
-  }
-
-  renderDashboardStats();
-  renderVitalsTable('vitals-tbody', state.vitals.slice(0, 5));
-  checkAlerts();
-
-  const lastEl = $('last-updated');
-  if (lastEl && state.vitals.length > 0) {
-    lastEl.textContent = 'Updated ' + timeAgo(state.vitals[0].recorded_at);
-  }
-  if ($('readings-count')) {
-    $('readings-count').textContent = state.vitals.length;
-  }
-}
-
 function renderDashboardStats() {
   const v = state.vitals[0];
   if (!v) return;

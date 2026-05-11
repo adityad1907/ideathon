@@ -7,7 +7,7 @@
 // ============================================================
 //  SHEETS DIRECT URL
 // ============================================================
-const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzt_PqDBhkJqnEFq6QQu7XEqVxA7E4ZwJtM-iEA2OFpC-X9j0LuJpVS9ulfHERpENuX/exec';
+const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwuV2DRzMDDUM0eyOPFWQk3oYTtClWyr6AXmLKHH5sxXqaNt6nFf3N-Ktn0PCla8lGP/exec';
 
 // ============================================================
 //  APP STATE
@@ -294,12 +294,57 @@ $('forgot-form').addEventListener('submit', (e) => {
 });
 
 // ============================================================
+//  PATIENT SERIAL NUMBER SYSTEM
+//  Family users get a simple number: 1, 2, 3...
+//  This is stored in their profile and shown in the app.
+//  The ESP32 PATIENT_ID must match this number.
+// ============================================================
+function getNextPatientNumber() {
+  const profiles = DB.all('user_profiles');
+  const existing = profiles
+    .map(p => Number(p.patient_number))
+    .filter(n => !isNaN(n) && n > 0);
+  return existing.length > 0 ? Math.max(...existing) + 1 : 1;
+}
+
+function assignPatientNumber(userId) {
+  const profile = DB.find('user_profiles', p => p.user_id === userId);
+  if (profile?.patient_number) return profile.patient_number; // already assigned
+  const num = getNextPatientNumber();
+  DB.update('user_profiles', p => p.user_id === userId, { patient_number: num });
+  return num;
+}
+
+function getPatientNumber(userId) {
+  const profile = DB.find('user_profiles', p => p.user_id === userId);
+  return profile?.patient_number || null;
+}
+
+// ============================================================
 //  ROLE SELECTION
 // ============================================================
 qsa('[data-role]').forEach(btn => {
   btn.addEventListener('click', () => {
     const role = btn.dataset.role;
+
+    // ── Admin password gate ──────────────────────────────
+    if (role === 'admin') {
+      const entered = prompt('🛡️ Enter Admin Password:');
+      if (entered === null) return;
+      if (entered !== 'medisense') {
+        showToast('Incorrect admin password', 'error');
+        return;
+      }
+    }
+
     state.role = role;
+
+    // ── Assign sequential patient number for family users ─
+    if (role === 'family') {
+      const num = assignPatientNumber(state.user.id);
+      state.patientNumber = num;
+      showToast(`Your Patient ID is: ${num} — use this in ESP32`, 'success');
+    }
 
     DB.upsert('sessions', {
       user_id: state.user.id, role, last_seen: new Date().toISOString(),
@@ -352,9 +397,28 @@ function setupUserUI() {
 
   $('sidebar-avatar').textContent = initial;
   $('sidebar-name').textContent   = name;
-  $('sidebar-role').textContent   = role;
   $('topbar-role').textContent    = role;
   $('dashboard-greeting').textContent = `Welcome back, ${name}`;
+
+  // Show patient number for family users
+  if (role === 'family') {
+    const num = getPatientNumber(state.user.id);
+    $('sidebar-role').textContent = num ? `Patient #${num}` : 'Family';
+    // Show patient number in a prominent banner
+    const existing = $('patient-id-banner');
+    if (!existing) {
+      const banner = document.createElement('div');
+      banner.id = 'patient-id-banner';
+      banner.style.cssText = `
+        background:var(--accent);color:#fff;text-align:center;
+        padding:8px;font-size:13px;font-weight:600;letter-spacing:0.5px;
+      `;
+      banner.innerHTML = `📟 Your Patient ID: <strong style="font-size:16px">${num}</strong> &nbsp;|&nbsp; Set this as PATIENT_ID in your ESP32`;
+      document.querySelector('.main-content')?.prepend(banner);
+    }
+  } else {
+    $('sidebar-role').textContent = role;
+  }
 
   if ($('p-name'))  $('p-name').value  = name;
   if ($('p-email')) $('p-email').value = email;
@@ -563,12 +627,60 @@ $('logout-btn').addEventListener('click', () => {
 //  VITALS — Fetch directly from Google Sheets (no localStorage sync)
 // ============================================================
 async function loadVitals() {
-  if (state.role === 'admin') return; // admin uses admin panel, not vitals
+  if (state.role === 'admin') return;
+
+  // For family users, use their patient number as the identifier
+  const patientNum = state.role === 'family'
+    ? String(getPatientNumber(state.user.id) || state.user.id)
+    : state.user.id;
 
   try {
-    const role   = state.role || 'family';
-    const userId = state.user?.id || '';
-    const url    = `${SHEETS_WEBAPP_URL}?action=getVitals&role=${role}&userId=${userId}`;
+    const role = state.role || 'family';
+    const url  = `${SHEETS_WEBAPP_URL}?action=getVitals&role=${role}&userId=${patientNum}`;
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.ok && data.data?.length) {
+      let vitals = data.data.sort((a, b) =>
+        String(b.recorded_at).localeCompare(String(a.recorded_at)));
+
+      if (role === 'doctor') {
+        const myPatients   = getPatientsForDoctor(state.user.id);
+        const myPatientIds = new Set(myPatients.map(p =>
+          String(getPatientNumber(p.id) || p.id)
+        ));
+        if (myPatientIds.size > 0) {
+          vitals = vitals.filter(v => myPatientIds.has(String(v.recorded_by)));
+        }
+      } else {
+        vitals = vitals.filter(v => String(v.recorded_by) === patientNum);
+      }
+
+      state.vitals = vitals.slice(0, 20);
+    } else {
+      state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
+        .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
+        .slice(0, 20);
+    }
+  } catch (err) {
+    console.warn('[Vitals] Sheets fetch failed:', err.message);
+    state.vitals = DB.filter('vital_signs', v => v.recorded_by === state.user.id)
+      .sort((a, b) => b.recorded_at.localeCompare(a.recorded_at))
+      .slice(0, 20);
+  }
+
+  renderDashboardStats();
+  renderVitalsTable('vitals-tbody', state.vitals.slice(0, 5));
+  checkAlerts();
+
+  const lastEl = $('last-updated');
+  if (lastEl && state.vitals.length > 0) {
+    lastEl.textContent = 'Updated ' + timeAgo(state.vitals[0].recorded_at);
+  }
+  if ($('readings-count')) {
+    $('readings-count').textContent = state.vitals.length;
+  }
+}
 
     const res  = await fetch(url);
     const data = await res.json();

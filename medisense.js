@@ -7,7 +7,7 @@
 // ============================================================
 //  SHEETS DIRECT URL
 // ============================================================
-const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxEM-6TaCZAtuKSkxCxsih95cLW2QzcuH9rKaQOwltyaOxnF4IArsPFU1uoE_Csypa7/exec';
+const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbx1aIFAdBoyc4byz_rC1Gxvsba4oI32dqbvCoIRseUgWMiMrUutZxps2tWyjBWQXodW/exec';
 
 // ============================================================
 //  APP STATE

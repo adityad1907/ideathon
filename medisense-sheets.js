@@ -28,7 +28,7 @@
   // ──────────────────────────────────────────────────────────
   //  ⚠️  YOUR APPS SCRIPT URL — do not change this line
   // ──────────────────────────────────────────────────────────
-  const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwuV2DRzMDDUM0eyOPFWQk3oYTtClWyr6AXmLKHH5sxXqaNt6nFf3N-Ktn0PCla8lGP/exec';
+  const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxU_wrcdBMO-5o_Ufcbrq5aZQpzWjhMcXZ4rcs_GvAwr_9x8gGm6auuptNaWtWBSZTD/exec';
 
   const CONFIGURED = !SHEETS_WEBAPP_URL.includes('YOUR_APPS_SCRIPT');
 

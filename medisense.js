@@ -763,9 +763,17 @@ $('vitals-form').addEventListener('submit', (e) => {
   const savedVital = DB.insert('vital_signs', payload);
 
   // ── Sync to Google Sheets ──
-  Sheets.appendVital(savedVital).then(r => {
-    if (r.ok) console.log('[Sheets] Vital synced ✓');
-    else      console.warn('[Sheets] Vital sync failed:', r.error);
+  // Pass state.role so the server knows whether this is doctor vs patient
+  Sheets.appendVital(savedVital, state.role).then(r => {
+    if (r.ok) {
+      console.log('[Sheets] Vital synced ✓');
+      // If the server detected any critical or warning thresholds, show the popup
+      if (r.alerts && r.alerts.length > 0) {
+        showCriticalAlertModal(r.alerts);
+      }
+    } else {
+      console.warn('[Sheets] Vital sync failed:', r.error);
+    }
   });
 
   setLoading(btn, false);
@@ -928,6 +936,89 @@ function timeAgo(iso) {
   if (m < 1)  return 'just now';
   if (m < 60) return `${m}m ago`;
   return `${Math.floor(m / 60)}h ago`;
+}
+
+// ============================================================
+//  CRITICAL ALERT MODAL — shown to patient after vitals submit
+//  if the server detects any reading outside safe thresholds.
+//  Alerts come from Apps Script (already computed server-side).
+// ============================================================
+function showCriticalAlertModal(alerts) {
+  // Remove any existing modal to avoid duplicates
+  const existing = document.getElementById('critical-alert-modal');
+  if (existing) existing.remove();
+
+  // Decide the severity colour based on whether any alert is CRITICAL
+  const hasCritical = alerts.some(a => a.level === 'CRITICAL');
+  const headerBg    = hasCritical ? '#fee2e2' : '#fef3c7';
+  const headerColor = hasCritical ? '#991b1b' : '#92400e';
+  const heading     = hasCritical ? '🚨 Critical Health Alert' : '⚠️ Health Warning';
+  const subtext     = hasCritical
+    ? 'Your doctor has been notified. Follow the steps below while you wait.'
+    : 'No doctor email sent. Monitor closely and follow the steps below.';
+
+  // Build one card per flagged vital
+  const cards = alerts.map(a => {
+    const borderCol = a.level === 'CRITICAL' ? '#fca5a5' : '#fcd34d';
+    const bgCol     = a.level === 'CRITICAL' ? '#fff7f7' : '#fffbeb';
+    const badgeBg   = a.level === 'CRITICAL' ? '#dc2626' : '#d97706';
+    return `
+      <div style="border:1px solid ${borderCol};border-radius:8px;padding:12px;margin-bottom:12px;background:${bgCol}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-weight:600;font-size:15px;color:#111">${a.vital}</span>
+          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;background:${badgeBg};color:#fff">
+            ${a.level} — ${a.value}
+          </span>
+        </div>
+        <p style="margin:0;font-size:13px;color:#374151;line-height:1.6">
+          💊 <strong>What to do:</strong> ${a.suggestion}
+        </p>
+      </div>`;
+  }).join('');
+
+  // Build and inject the full modal overlay
+  const modal = document.createElement('div');
+  modal.id = 'critical-alert-modal';
+  modal.innerHTML = `
+    <div style="
+      position:fixed;inset:0;z-index:9999;
+      background:rgba(0,0,0,0.65);
+      display:flex;align-items:center;justify-content:center;
+      padding:16px;
+    ">
+      <div style="
+        background:#fff;border-radius:14px;
+        max-width:520px;width:100%;
+        padding:24px;box-shadow:0 8px 40px rgba(0,0,0,0.3);
+        max-height:90vh;overflow-y:auto;
+      ">
+        <!-- Header bar — red for CRITICAL, amber for WARNING-only -->
+        <div style="background:${headerBg};border-radius:8px;padding:14px 16px;margin-bottom:18px">
+          <h2 style="margin:0;font-size:18px;color:${headerColor}">${heading}</h2>
+          <p style="margin:6px 0 0;font-size:13px;color:#6b7280">${subtext}</p>
+        </div>
+
+        <!-- Vital alert cards -->
+        ${cards}
+
+        <!-- Dismiss button — wording forces acknowledgement, not just "Close" -->
+        <button id="dismiss-alert-btn" style="
+          width:100%;padding:11px;margin-top:6px;
+          background:#1d4ed8;color:#fff;border:none;
+          border-radius:8px;font-size:15px;font-weight:600;
+          cursor:pointer;letter-spacing:0.01em;
+        ">
+          I understand — dismiss alert
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+
+  // Dismiss button removes the entire modal from the DOM
+  document.getElementById('dismiss-alert-btn').addEventListener('click', () => {
+    modal.remove();
+  });
 }
 
 // ============================================================

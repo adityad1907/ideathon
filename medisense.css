@@ -614,12 +614,3 @@ a:hover { text-decoration: underline; }
   color: #0EA5E9;
   white-space: nowrap;
 }
-
-/* ── Critical Alert Modal ── */
-#critical-alert-modal button:hover {
-  background: #1e40af !important;
-}
-
-#critical-alert-modal {
-  font-family: 'DM Sans', sans-serif;
-}

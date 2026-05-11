@@ -8,664 +8,796 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="medisense.css" />
+
+  <style>
+    /* ── Extra fix: unified CSS vars used in admin inline styles ── */
+    :root {
+      --ink:      var(--text);
+      --ink-soft: var(--text-2);
+      --ink-dim:  var(--text-3);
+      --rule:     var(--border);
+      --card:     var(--surface);
+      --accent:   var(--brand);
+    }
+
+    /* Stat card status colours */
+    .stat-status.ok   { color: var(--ok);     font-size: .75rem; font-weight: 600; }
+    .stat-status.warn { color: var(--warn);   font-size: .75rem; font-weight: 600; }
+    .stat-status.crit { color: var(--danger); font-size: .75rem; font-weight: 600; }
+
+    /* Sidebar footer */
+    .sidebar-footer {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .user-info  { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
+    .avatar     {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--brand-light); color: var(--brand);
+      font-size: 1rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; text-transform: uppercase;
+    }
+    .user-meta  { min-width: 0; }
+    .user-name  { font-size: .85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-role  { font-size: .75rem; color: var(--text-2); text-transform: capitalize; }
+    .logout-btn {
+      background: none; border: none; color: var(--text-3); cursor: pointer;
+      padding: 6px; border-radius: 6px; display: flex; align-items: center;
+      transition: color .2s;
+    }
+    .logout-btn:hover { color: var(--danger); }
+
+    /* Topbar */
+    .topbar {
+      display: none;
+      align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .menu-toggle {
+      background: none; border: none; font-size: 1.1rem;
+      cursor: pointer; color: var(--text-2); padding: 4px 8px;
+    }
+    .topbar-title { font-weight: 600; flex: 1; }
+    .role-pill {
+      background: var(--brand-light); color: var(--brand);
+      padding: 3px 10px; border-radius: 20px;
+      font-size: .75rem; font-weight: 600; text-transform: capitalize;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+    /* Main layout */
+    .main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+    .view { display: none; padding: 24px 28px; }
+    .view.active { display: block; }
+
+    /* View header */
+    .view-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 24px;
+    }
+    .view-title { font-size: 1.4rem; font-weight: 700; }
+    .view-sub   { color: var(--text-2); font-size: .875rem; margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .last-updated { font-size: .78rem; color: var(--text-3); }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex; align-items: flex-start; gap: 14px;
+      box-shadow: var(--shadow);
+    }
+    .stat-icon { font-size: 1.6rem; line-height: 1; }
+    .stat-info { flex: 1; }
+    .stat-label { font-size: .75rem; color: var(--text-2); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+    .stat-val   { font-size: 1.45rem; font-weight: 700; line-height: 1.2; margin: 2px 0; }
+    .stat-val span { font-size: .75rem; font-weight: 400; color: var(--text-2); }
+
+    /* Insight panel */
+    .insight-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+    .insight-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .insight-title  { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+    .ai-badge {
+      background: linear-gradient(135deg, #0EA5E9, #8B5CF6);
+      color: #fff; font-size: .65rem; font-weight: 700;
+      padding: 2px 6px; border-radius: 4px; letter-spacing: .04em;
+    }
+    .insight-body         { font-size: .875rem; color: var(--text-2); line-height: 1.65; }
+    .insight-placeholder  { color: var(--text-3); font-style: italic; }
+
+    /* Table card */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table-header h3 { font-weight: 600; font-size: .95rem; }
+    .badge {
+      background: var(--brand); color: #fff;
+      font-size: .72rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 20px;
+      min-width: 20px; text-align: center;
+    }
+
+    /* Chat disclaimer */
+    .chat-disclaimer {
+      padding: 6px 14px 10px;
+      font-size: .7rem;
+      color: var(--text-3);
+      text-align: center;
+    }
+    .chat-online-dot {
+      display: inline-block;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #4ade80;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    @media (max-width: 1024px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .main { margin-left: 0; }
+      .topbar { display: flex; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .view { padding: 16px; }
+    }
+    @media (max-width: 520px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 
-  <div id="auth-wrapper" class="auth-wrapper">
-    <div id="toast" class="toast" aria-live="polite"></div>
-    <div id="screen-login" class="auth-card active">
-      <div class="auth-brand">
-        <div class="brand-icon">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="10" fill="#0EA5E9"/>
-            <path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <h1 class="brand-name">MediSense <span>AI</span></h1>
-      </div>
-      <p class="auth-subtitle">Smart vitals monitoring for healthcare teams</p>
+<!-- ══════════ AUTH WRAPPER ══════════ -->
+<div id="auth-wrapper" class="auth-wrapper">
+  <div id="toast" class="toast" aria-live="polite"></div>
 
-      <div class="tab-row">
-        <button class="tab active" data-tab="login">Sign In</button>
-        <button class="tab" data-tab="signup">Sign Up</button>
+  <!-- Login / Sign-up screen -->
+  <div id="screen-login" class="auth-card active">
+    <div class="auth-brand">
+      <div class="brand-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="10" fill="#0EA5E9"/>
+          <path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
       </div>
-      <form id="login-form" class="auth-form" novalidate>
-        <div class="field">
-          <label for="login-email">Email</label>
-          <input id="login-email" type="email" placeholder="you@hospital.com" autocomplete="email" />
-        </div>
-        <div class="field">
-          <label for="login-password">Password</label>
-          <div class="pw-wrap">
-            <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
-            <button type="button" class="eye-btn" data-target="login-password">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
-        <a href="#" id="forgot-link" class="forgot-link">Forgot password?</a>
-        <button type="submit" class="btn-primary" id="login-btn">
-          <span>Sign In</span>
-          <div class="spinner hidden"></div>
-        </button>
-      </form>
-      <form id="signup-form" class="auth-form hidden" novalidate>
-        <div class="field">
-          <label for="signup-name">Full Name</label>
-          <input id="signup-name" type="text" placeholder="Dr. Jane Smith" autocomplete="name" />
-        </div>
-        <div class="field">
-          <label for="signup-email">Email</label>
-          <input id="signup-email" type="email" placeholder="you@hospital.com" autocomplete="email" />
-        </div>
-        <div class="field">
-          <label for="signup-password">Password</label>
-          <div class="pw-wrap">
-            <input id="signup-password" type="password" placeholder="Min 8 characters" autocomplete="new-password" />
-            <button type="button" class="eye-btn" data-target="signup-password">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
-        <div class="field">
-          <label for="signup-password2">Confirm Password</label>
-          <input id="signup-password2" type="password" placeholder="••••••••" autocomplete="new-password" />
-        </div>
-        <button type="submit" class="btn-primary" id="signup-btn">
-          <span>Create Account</span>
-          <div class="spinner hidden"></div>
-        </button>
-      </form>
+      <h1 class="brand-name">MediSense <span>AI</span></h1>
+    </div>
+    <p class="auth-subtitle">Smart vitals monitoring for healthcare teams</p>
 
-      <div class="divider"><span>or</span></div>
-      <button id="google-btn" class="btn-google">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
+    <div class="tab-row">
+      <button class="tab active" data-tab="login">Sign In</button>
+      <button class="tab" data-tab="signup">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" class="auth-form" novalidate>
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input id="login-email" type="email" placeholder="you@hospital.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <div class="pw-wrap">
+          <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+          <button type="button" class="eye-btn" data-target="login-password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <a href="#" id="forgot-link" class="forgot-link">Forgot password?</a>
+      <button type="submit" class="btn-primary" id="login-btn">
+        <span>Sign In</span>
+        <div class="spinner hidden"></div>
       </button>
+    </form>
 
-      <p class="otp-prompt">Hospital staff? <a href="#" id="otp-link">Use OTP login →</a></p>
-    </div>
-    <div id="screen-otp" class="auth-card">
-      <button class="back-btn" id="back-from-otp">← Back</button>
-      <div class="auth-brand">
-        <div class="brand-icon">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
-        </div>
-        <h1 class="brand-name">MediSense <span>AI</span></h1>
+    <!-- Sign-up Form -->
+    <form id="signup-form" class="auth-form hidden" novalidate>
+      <div class="field">
+        <label for="signup-name">Full Name</label>
+        <input id="signup-name" type="text" placeholder="Dr. Jane Smith" autocomplete="name" />
       </div>
-      <p class="auth-subtitle">Enter your email and password, then verify with OTP</p>
+      <div class="field">
+        <label for="signup-email">Email</label>
+        <input id="signup-email" type="email" placeholder="you@hospital.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="signup-password">Password</label>
+        <div class="pw-wrap">
+          <input id="signup-password" type="password" placeholder="Min 8 characters" autocomplete="new-password" />
+          <button type="button" class="eye-btn" data-target="signup-password">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="signup-password2">Confirm Password</label>
+        <input id="signup-password2" type="password" placeholder="••••••••" autocomplete="new-password" />
+      </div>
+      <button type="submit" class="btn-primary" id="signup-btn">
+        <span>Create Account</span>
+        <div class="spinner hidden"></div>
+      </button>
+    </form>
 
-      <form id="otp-request-form" class="auth-form" novalidate>
-        <div class="field">
-          <label for="otp-email">Email</label>
-          <input id="otp-email" type="email" placeholder="you@hospital.com" />
-        </div>
-        <div class="field">
-          <label for="otp-password">Password</label>
-          <input id="otp-password" type="password" placeholder="••••••••" />
-        </div>
-        <button type="submit" class="btn-primary" id="send-otp-btn">
-          <span>Send OTP</span>
-          <div class="spinner hidden"></div>
-        </button>
-      </form>
-
-      <div id="otp-verify-section" class="otp-verify hidden">
-        <p class="otp-sent-msg">OTP sent! Check your email (or browser console in demo mode).</p>
-        <div class="otp-boxes" id="otp-boxes">
-          <input class="otp-digit" maxlength="1" inputmode="numeric" />
-          <input class="otp-digit" maxlength="1" inputmode="numeric" />
-          <input class="otp-digit" maxlength="1" inputmode="numeric" />
-          <input class="otp-digit" maxlength="1" inputmode="numeric" />
-          <input class="otp-digit" maxlength="1" inputmode="numeric" />
-          <input class="otp-digit" maxlength="1" inputmode="numeric" />
-        </div>
-        <button class="btn-primary" id="verify-otp-btn">
-          <span>Verify OTP</span>
-          <div class="spinner hidden"></div>
-        </button>
-        <button class="btn-ghost" id="resend-otp-btn">Resend OTP (<span id="resend-timer">60</span>s)</button>
-      </div>
-    </div>
-    <div id="screen-forgot" class="auth-card">
-      <button class="back-btn" id="back-from-forgot">← Back</button>
-      <h2 class="screen-title">Reset Password</h2>
-      <p class="auth-subtitle">We'll email you a reset link.</p>
-      <form id="forgot-form" class="auth-form" novalidate>
-        <div class="field">
-          <label for="forgot-email">Email</label>
-          <input id="forgot-email" type="email" placeholder="you@hospital.com" />
-        </div>
-        <button type="submit" class="btn-primary" id="forgot-btn">
-          <span>Send Reset Link</span>
-          <div class="spinner hidden"></div>
-        </button>
-      </form>
-    </div>
-    <div id="screen-role" class="auth-card">
-      <div class="auth-brand">
-        <div class="brand-icon">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
-        </div>
-        <h1 class="brand-name">MediSense <span>AI</span></h1>
-      </div>
-      <p class="auth-subtitle">Who are you logging in as?</p>
-      <div class="role-cards">
-        <button class="role-card" data-role="doctor">
-          <div class="role-icon">🩺</div>
-          <div class="role-label">Doctor / Clinician</div>
-          <div class="role-desc">Full access to all patient vitals, trends & alerts</div>
-        </button>
-        <button class="role-card" data-role="family">
-          <div class="role-icon">👨‍👩‍👧</div>
-          <div class="role-label">Family Member</div>
-          <div class="role-desc">View linked patient's readings in real-time</div>
-        </button>
-        <button class="role-card" data-role="admin">
-          <div class="role-icon">🛡️</div>
-          <div class="role-label">Administrator</div>
-          <div class="role-desc">Assign patients to doctors & manage all users</div>
-        </button>
-      </div>
-    </div>
-
+    <div class="divider"><span>or</span></div>
+    <button id="google-btn" class="btn-google">
+      <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Continue with Google
+    </button>
+    <p class="otp-prompt">Hospital staff? <a href="#" id="otp-link">Use OTP login →</a></p>
   </div>
-  <div id="app" class="app hidden">
 
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
-        <span>MediSense</span>
+  <!-- OTP Screen -->
+  <div id="screen-otp" class="auth-card">
+    <button class="back-btn" id="back-from-otp">← Back</button>
+    <div class="auth-brand">
+      <div class="brand-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
       </div>
-      <nav class="sidebar-nav">
-        <a href="#" class="nav-item active" data-view="dashboard">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-          Dashboard
-        </a>
-        <a href="#" class="nav-item" data-view="vitals">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Live Vitals
-        </a>
-        <a href="#" class="nav-item" data-view="history">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          History
-        </a>
-        <a href="#" class="nav-item" data-view="alerts">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          Alerts
-          <span class="badge" id="alert-badge">0</span>
-        </a>
+      <h1 class="brand-name">MediSense <span>AI</span></h1>
+    </div>
+    <p class="auth-subtitle">Verify your identity with OTP</p>
+    <form id="otp-request-form" class="auth-form" novalidate>
+      <div class="field">
+        <label for="otp-email">Email</label>
+        <input id="otp-email" type="email" placeholder="you@hospital.com" />
+      </div>
+      <div class="field">
+        <label for="otp-password">Password</label>
+        <input id="otp-password" type="password" placeholder="••••••••" />
+      </div>
+      <button type="submit" class="btn-primary" id="send-otp-btn">
+        <span>Send OTP</span>
+        <div class="spinner hidden"></div>
+      </button>
+    </form>
+    <div id="otp-verify-section" class="otp-verify hidden">
+      <p class="otp-sent-msg">OTP sent! Check your browser console (demo mode).</p>
+      <div class="otp-boxes" id="otp-boxes">
+        <input class="otp-digit" maxlength="1" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" />
+        <input class="otp-digit" maxlength="1" inputmode="numeric" />
+      </div>
+      <button class="btn-primary" id="verify-otp-btn">
+        <span>Verify OTP</span>
+        <div class="spinner hidden"></div>
+      </button>
+      <button class="btn-ghost" id="resend-otp-btn">Resend OTP (<span id="resend-timer">60</span>s)</button>
+    </div>
+  </div>
 
-        <a href="#" class="nav-item" data-view="profile" id="doctor-only-nav" style="display:none">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Profile
-        </a>
-        <a href="#" class="nav-item" data-view="admin" id="admin-only-nav" style="display:none">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Admin
-        </a>
-      </nav>
-      <div class="sidebar-footer">
-        <div class="user-info" id="sidebar-user">
-          <div class="avatar" id="sidebar-avatar">?</div>
-          <div class="user-meta">
-            <div class="user-name" id="sidebar-name">—</div>
-            <div class="user-role" id="sidebar-role">—</div>
-          </div>
-        </div>
-        <button class="logout-btn" id="logout-btn" title="Sign out">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </button>
+  <!-- Forgot Password Screen -->
+  <div id="screen-forgot" class="auth-card">
+    <button class="back-btn" id="back-from-forgot">← Back</button>
+    <h2 class="screen-title">Reset Password</h2>
+    <p class="auth-subtitle">We'll show a temporary password in the console (demo).</p>
+    <form id="forgot-form" class="auth-form" novalidate>
+      <div class="field">
+        <label for="forgot-email">Email</label>
+        <input id="forgot-email" type="email" placeholder="you@hospital.com" />
       </div>
-    </aside>
+      <button type="submit" class="btn-primary" id="forgot-btn">
+        <span>Reset Password</span>
+        <div class="spinner hidden"></div>
+      </button>
+    </form>
+  </div>
 
-    <main class="main" id="main-content">
+  <!-- Role Selection Screen -->
+  <div id="screen-role" class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </div>
+      <h1 class="brand-name">MediSense <span>AI</span></h1>
+    </div>
+    <p class="auth-subtitle">Who are you logging in as?</p>
+    <div class="role-cards">
+      <button class="role-card" data-role="doctor">
+        <div class="role-icon">🩺</div>
+        <div class="role-label">Doctor / Clinician</div>
+        <div class="role-desc">Full access to all patient vitals, trends & alerts</div>
+      </button>
+      <button class="role-card" data-role="family">
+        <div class="role-icon">👨‍👩‍👧</div>
+        <div class="role-label">Patient / Family</div>
+        <div class="role-desc">View your linked patient's readings in real-time</div>
+      </button>
+      <button class="role-card" data-role="admin">
+        <div class="role-icon">🛡️</div>
+        <div class="role-label">Administrator</div>
+        <div class="role-desc">Assign patients to doctors & manage all users</div>
+      </button>
+    </div>
+  </div>
 
-      <div class="topbar">
-        <button class="menu-toggle" id="menu-toggle">☰</button>
-        <span class="topbar-title">MediSense AI</span>
-        <div class="topbar-right">
-          <span class="role-pill" id="topbar-role">—</span>
+</div><!-- /auth-wrapper -->
+
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div id="app" class="app hidden">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="10" fill="#0EA5E9"/><path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span>MediSense</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="dashboard">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-item" data-view="vitals">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Log Vitals
+      </a>
+      <a href="#" class="nav-item" data-view="history">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        History
+      </a>
+      <a href="#" class="nav-item" data-view="alerts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Alerts
+        <span class="badge" id="alert-badge"></span>
+      </a>
+      <a href="#" class="nav-item" data-view="profile" id="doctor-only-nav" style="display:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </a>
+      <a href="#" class="nav-item" data-view="admin" id="admin-only-nav" style="display:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Admin
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info" id="sidebar-user">
+        <div class="avatar" id="sidebar-avatar">?</div>
+        <div class="user-meta">
+          <div class="user-name" id="sidebar-name">—</div>
+          <div class="user-role" id="sidebar-role">—</div>
+        </div>
+      </div>
+      <button class="logout-btn" id="logout-btn" title="Sign out">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main" id="main-content">
+
+    <!-- Mobile topbar -->
+    <div class="topbar">
+      <button class="menu-toggle" id="menu-toggle">☰</button>
+      <span class="topbar-title">MediSense AI</span>
+      <div class="topbar-right">
+        <span class="role-pill" id="topbar-role">—</span>
+      </div>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="view-dashboard" class="view active">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Dashboard</h2>
+          <p class="view-sub" id="dashboard-greeting">Welcome back</p>
+        </div>
+        <div class="header-actions">
+          <span class="last-updated" id="last-updated">—</span>
+          <button class="btn-sm" id="refresh-btn">↻ Refresh</button>
         </div>
       </div>
 
-      <div id="view-dashboard" class="view active">
-        <div class="view-header">
-          <div>
-            <h2 class="view-title">Dashboard</h2>
-            <p class="view-sub" id="dashboard-greeting">Welcome back</p>
-          </div>
-          <div class="header-actions">
-            <span class="last-updated" id="last-updated">—</span>
-            <button class="btn-sm" id="refresh-btn">↻ Refresh</button>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">❤️</div>
+          <div class="stat-info">
+            <div class="stat-label">Heart Rate</div>
+            <div class="stat-val" id="stat-hr">— <span>bpm</span></div>
+            <div class="stat-status" id="stat-hr-status">—</div>
           </div>
         </div>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon heart">❤️</div>
-            <div class="stat-info">
-              <div class="stat-label">Heart Rate</div>
-              <div class="stat-val" id="stat-hr">— <span>bpm</span></div>
-              <div class="stat-status" id="stat-hr-status">—</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon spo2">💧</div>
-            <div class="stat-info">
-              <div class="stat-label">SpO₂</div>
-              <div class="stat-val" id="stat-spo2">— <span>%</span></div>
-              <div class="stat-status" id="stat-spo2-status">—</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon temp">🌡️</div>
-            <div class="stat-info">
-              <div class="stat-label">Temperature</div>
-              <div class="stat-val" id="stat-temp">— <span>°C</span></div>
-              <div class="stat-status" id="stat-temp-status">—</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon bp">🔴</div>
-            <div class="stat-info">
-              <div class="stat-label">Blood Pressure</div>
-              <div class="stat-val" id="stat-bp">—/— <span>mmHg</span></div>
-              <div class="stat-status" id="stat-bp-status">—</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon resp">🫁</div>
-            <div class="stat-info">
-              <div class="stat-label">Resp. Rate</div>
-              <div class="stat-val" id="stat-resp">— <span>/min</span></div>
-              <div class="stat-status" id="stat-resp-status">—</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon glucose">🩸</div>
-            <div class="stat-info">
-              <div class="stat-label">Blood Glucose</div>
-              <div class="stat-val" id="stat-glucose">— <span>mg/dL</span></div>
-              <div class="stat-status" id="stat-glucose-status">—</div>
-            </div>
+        <div class="stat-card">
+          <div class="stat-icon">💧</div>
+          <div class="stat-info">
+            <div class="stat-label">SpO₂</div>
+            <div class="stat-val" id="stat-spo2">— <span>%</span></div>
+            <div class="stat-status" id="stat-spo2-status">—</div>
           </div>
         </div>
-        <div class="insight-panel">
-          <div class="insight-header">
-            <div class="insight-title">
-              <span class="ai-badge">AI</span>
-              Clinical Insight
-            </div>
-            <button class="btn-sm" id="get-insight-btn">Generate →</button>
-          </div>
-          <div class="insight-body" id="insight-body">
-            <p class="insight-placeholder">Click "Generate" to get an AI-powered interpretation of the latest vitals.</p>
+        <div class="stat-card">
+          <div class="stat-icon">🌡️</div>
+          <div class="stat-info">
+            <div class="stat-label">Temperature</div>
+            <div class="stat-val" id="stat-temp">— <span>°C</span></div>
+            <div class="stat-status" id="stat-temp-status">—</div>
           </div>
         </div>
-        <div class="table-card">
-          <div class="table-header">
-            <h3>Recent Readings</h3>
-            <span id="readings-count" class="badge">0</span>
+        <div class="stat-card">
+          <div class="stat-icon">🔴</div>
+          <div class="stat-info">
+            <div class="stat-label">Blood Pressure</div>
+            <div class="stat-val" id="stat-bp">—/— <span>mmHg</span></div>
+            <div class="stat-status" id="stat-bp-status">—</div>
           </div>
-          <div class="table-wrap">
-            <table class="vitals-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>HR</th>
-                  <th>SpO₂</th>
-                  <th>Temp</th>
-                  <th>BP</th>
-                  <th>Resp</th>
-                  <th>Glucose</th>
-                </tr>
-              </thead>
-              <tbody id="vitals-tbody">
-                <tr><td colspan="7" class="empty-row">No readings yet</td></tr>
-              </tbody>
-            </table>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🫁</div>
+          <div class="stat-info">
+            <div class="stat-label">Resp. Rate</div>
+            <div class="stat-val" id="stat-resp">— <span>/min</span></div>
+            <div class="stat-status" id="stat-resp-status">—</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🩸</div>
+          <div class="stat-info">
+            <div class="stat-label">Blood Glucose</div>
+            <div class="stat-val" id="stat-glucose">— <span>mg/dL</span></div>
+            <div class="stat-status" id="stat-glucose-status">—</div>
           </div>
         </div>
       </div>
-      <div id="view-vitals" class="view">
-        <div class="view-header">
-          <div>
-            <h2 class="view-title">Log Vitals</h2>
-            <p class="view-sub">Record a new vital signs reading</p>
+
+      <div class="insight-panel">
+        <div class="insight-header">
+          <div class="insight-title">
+            <span class="ai-badge">AI</span>
+            Clinical Insight
           </div>
+          <button class="btn-sm" id="get-insight-btn">Generate →</button>
         </div>
-        <div class="form-card">
-          <form id="vitals-form" novalidate>
-            <div class="form-grid">
-              <div class="field">
-                <label>Heart Rate <small>(bpm)</small></label>
-                <input type="number" id="f-hr" placeholder="72" min="30" max="250" />
-              </div>
-              <div class="field">
-                <label>SpO₂ <small>(%)</small></label>
-                <input type="number" id="f-spo2" placeholder="98" min="50" max="100" step="0.1" />
-              </div>
-              <div class="field">
-                <label>Temperature <small>(°C)</small></label>
-                <input type="number" id="f-temp" placeholder="37.0" min="30" max="45" step="0.1" />
-              </div>
-              <div class="field">
-                <label>Systolic BP <small>(mmHg)</small></label>
-                <input type="number" id="f-sys" placeholder="120" min="60" max="250" />
-              </div>
-              <div class="field">
-                <label>Diastolic BP <small>(mmHg)</small></label>
-                <input type="number" id="f-dia" placeholder="80" min="30" max="150" />
-              </div>
-              <div class="field">
-                <label>Resp. Rate <small>(/min)</small></label>
-                <input type="number" id="f-resp" placeholder="16" min="5" max="60" />
-              </div>
-              <div class="field">
-                <label>Blood Glucose <small>(mg/dL)</small></label>
-                <input type="number" id="f-glucose" placeholder="100" min="20" max="600" step="0.1" />
-              </div>
+        <div class="insight-body" id="insight-body">
+          <p class="insight-placeholder">Click "Generate" to get an AI-powered interpretation of the latest vitals.</p>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Recent Readings</h3>
+          <span id="readings-count" class="badge">0</span>
+        </div>
+        <div class="table-wrap">
+          <table class="vitals-table">
+            <thead>
+              <tr>
+                <th>Time</th><th>HR</th><th>SpO₂</th><th>Temp</th>
+                <th>BP</th><th>Resp</th><th>Glucose</th>
+              </tr>
+            </thead>
+            <tbody id="vitals-tbody">
+              <tr><td colspan="7" class="empty-row">No readings yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── LOG VITALS ── -->
+    <div id="view-vitals" class="view">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Log Vitals</h2>
+          <p class="view-sub">Record a new vital signs reading</p>
+        </div>
+      </div>
+      <div class="form-card">
+        <form id="vitals-form" novalidate>
+          <div class="form-grid">
+            <div class="field">
+              <label>Heart Rate <small>(bpm)</small></label>
+              <input type="number" id="f-hr" placeholder="72" min="30" max="250" />
             </div>
-            <button type="submit" class="btn-primary" id="save-vitals-btn">
-              <span>Save Reading</span>
-              <div class="spinner hidden"></div>
-            </button>
-          </form>
-        </div>
-      </div>
-      <div id="view-history" class="view">
-        <div class="view-header">
-          <div>
-            <h2 class="view-title">Vitals History</h2>
-            <p class="view-sub">All recorded readings from Supabase</p>
+            <div class="field">
+              <label>SpO₂ <small>(%)</small></label>
+              <input type="number" id="f-spo2" placeholder="98" min="50" max="100" step="0.1" />
+            </div>
+            <div class="field">
+              <label>Temperature <small>(°C)</small></label>
+              <input type="number" id="f-temp" placeholder="37.0" min="30" max="45" step="0.1" />
+            </div>
+            <div class="field">
+              <label>Systolic BP <small>(mmHg)</small></label>
+              <input type="number" id="f-sys" placeholder="120" min="60" max="250" />
+            </div>
+            <div class="field">
+              <label>Diastolic BP <small>(mmHg)</small></label>
+              <input type="number" id="f-dia" placeholder="80" min="30" max="150" />
+            </div>
+            <div class="field">
+              <label>Resp. Rate <small>(/min)</small></label>
+              <input type="number" id="f-resp" placeholder="16" min="5" max="60" />
+            </div>
+            <div class="field">
+              <label>Blood Glucose <small>(mg/dL)</small></label>
+              <input type="number" id="f-glucose" placeholder="100" min="20" max="600" step="0.1" />
+            </div>
           </div>
-          <button class="btn-sm" id="export-btn">⬇ Export CSV</button>
-        </div>
-        <div class="table-card">
-          <div class="table-wrap">
-            <table class="vitals-table">
-              <thead>
-                <tr><th>Time</th><th>HR</th><th>SpO₂</th><th>Temp</th><th>BP</th><th>Resp</th><th>Glucose</th></tr>
-              </thead>
-              <tbody id="history-tbody">
-                <tr><td colspan="7" class="empty-row">Loading…</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div id="view-alerts" class="view">
-        <div class="view-header">
-          <div>
-            <h2 class="view-title">Alerts</h2>
-            <p class="view-sub">Vitals outside normal ranges</p>
-          </div>
-          <button class="btn-sm" id="clear-alerts-btn">Clear All</button>
-        </div>
-        <div id="alerts-list" class="alerts-list">
-          <p class="empty-state">No alerts — all vitals are within normal range ✓</p>
-        </div>
-      </div>
-      <div id="view-profile" class="view">
-        <div class="view-header">
-          <div>
-            <h2 class="view-title">Profile</h2>
-            <p class="view-sub">Manage your account</p>
-          </div>
-        </div>
-        <div class="form-card profile-card">
-          <div class="profile-avatar" id="profile-avatar-lg">?</div>
-          <div class="field">
-            <label>Full Name</label>
-            <input type="text" id="p-name" placeholder="Dr. Jane Smith" />
-          </div>
-          <div class="field">
-            <label>Email</label>
-            <input type="email" id="p-email" placeholder="you@hospital.com" disabled />
-          </div>
-          <div class="field">
-            <label>Department</label>
-            <input type="text" id="p-dept" placeholder="Cardiology" />
-          </div>
-          <div class="field">
-            <label>Hospital ID</label>
-            <input type="text" id="p-hospital" placeholder="HOSP-001" />
-          </div>
-          <button class="btn-primary" id="save-profile-btn">
-            <span>Save Profile</span>
+          <button type="submit" class="btn-primary" id="save-vitals-btn">
+            <span>Save Reading</span>
             <div class="spinner hidden"></div>
           </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── HISTORY ── -->
+    <div id="view-history" class="view">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Vitals History</h2>
+          <p class="view-sub">All recorded readings from Google Sheets</p>
+        </div>
+        <button class="btn-sm" id="export-btn">⬇ Export CSV</button>
+      </div>
+      <div class="table-card">
+        <div class="table-wrap">
+          <table class="vitals-table">
+            <thead>
+              <tr><th>Time</th><th>HR</th><th>SpO₂</th><th>Temp</th><th>BP</th><th>Resp</th><th>Glucose</th></tr>
+            </thead>
+            <tbody id="history-tbody">
+              <tr><td colspan="7" class="empty-row">Loading…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
+    </div>
 
-
-
-      <!-- ══════════ ADMIN VIEW ══════════ -->
-      <div id="view-admin" class="view">
-        <div class="view-header">
-          <div>
-            <h2 class="view-title">Admin Panel</h2>
-            <p class="view-sub">Assign patients to doctors</p>
-          </div>
-          <button class="btn-sm" id="admin-refresh-btn">↻ Refresh</button>
+    <!-- ── ALERTS ── -->
+    <div id="view-alerts" class="view">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Alerts</h2>
+          <p class="view-sub">Vitals outside normal ranges</p>
         </div>
+        <button class="btn-sm" id="clear-alerts-btn">Clear All</button>
+      </div>
+      <div id="alerts-list" class="alerts-list">
+        <p class="empty-state">No alerts — all vitals are within normal range ✓</p>
+      </div>
+    </div>
 
-        <!-- Patients Table -->
-        <div class="form-card" style="margin-bottom:20px">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:16px;color:var(--ink)">👤 Patients</h3>
-          <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:13px">
-              <thead>
-                <tr style="border-bottom:1px solid var(--rule)">
-                  <th style="text-align:left;padding:8px 12px;color:var(--ink-soft);font-weight:500">Name</th>
-                  <th style="text-align:left;padding:8px 12px;color:var(--ink-soft);font-weight:500">Email</th>
-                  <th style="text-align:left;padding:8px 12px;color:var(--ink-soft);font-weight:500">Assigned Doctor</th>
-                  <th style="text-align:left;padding:8px 12px;color:var(--ink-soft);font-weight:500">Action</th>
-                </tr>
-              </thead>
-              <tbody id="admin-patients-tbody">
-                <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--ink-soft)">Loading...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Doctors Table -->
-        <div class="form-card">
-          <h3 style="font-size:15px;font-weight:600;margin-bottom:16px;color:var(--ink)">🩺 Doctors</h3>
-          <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:13px">
-              <thead>
-                <tr style="border-bottom:1px solid var(--rule)">
-                  <th style="text-align:left;padding:8px 12px;color:var(--ink-soft);font-weight:500">Name</th>
-                  <th style="text-align:left;padding:8px 12px;color:var(--ink-soft);font-weight:500">Email</th>
-                  <th style="text-align:left;padding:8px 12px;color:var(--ink-soft);font-weight:500">Patients Assigned</th>
-                </tr>
-              </thead>
-              <tbody id="admin-doctors-tbody">
-                <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--ink-soft)">Loading...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Assignment Modal -->
-        <div id="assign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center;">
-          <div style="background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:28px;min-width:320px;max-width:90%">
-            <h3 style="font-size:16px;font-weight:600;margin-bottom:6px;color:var(--ink)">Assign Patient to Doctor</h3>
-            <p id="assign-patient-label" style="font-size:13px;color:var(--ink-soft);margin-bottom:16px"></p>
-            <select id="assign-doctor-select" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);font-size:14px;margin-bottom:16px">
-              <option value="">— Select a doctor —</option>
-            </select>
-            <div style="display:flex;gap:10px">
-              <button id="assign-confirm-btn" class="btn-primary" style="flex:1">Confirm</button>
-              <button id="assign-cancel-btn" class="btn-sm" style="flex:1">Cancel</button>
-            </div>
-          </div>
+    <!-- ── PROFILE ── -->
+    <div id="view-profile" class="view">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Profile</h2>
+          <p class="view-sub">Manage your account</p>
         </div>
       </div>
-
-    </main>
-  </div>
-
-  <script src="medisense-db.js"></script>
-  <script src="medisense-sheets.js"></script>
-  <script src="medisense.js"></script>
-
-
-
-  <!-- Floating button -->
-  <div id="ai-chat-widget">
-    <button id="ai-chat-toggle" aria-label="Open AI Health Assistant">
-      <!-- Chat bubble icon (shown when closed) -->
-      <svg id="chat-icon" width="26" height="26" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.527 3.66 1.438 5.168L2.5 21.5l4.332-.938A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
-          fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-        <circle cx="8.5"  cy="12" r="1.1" fill="currentColor"/>
-        <circle cx="12"   cy="12" r="1.1" fill="currentColor"/>
-        <circle cx="15.5" cy="12" r="1.1" fill="currentColor"/>
-      </svg>
-      <!-- X icon (shown when open) -->
-      <svg id="close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
-        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-      </svg>
-      <!-- Unread badge (disappears on open) -->
-      <span id="chat-unread" class="chat-unread">1</span>
-    </button>
-
-    <!-- Chat panel -->
-    <div id="ai-chat-panel" class="chat-panel hidden">
-
-      <!-- Header -->
-      <div class="chat-header">
-        <div class="chat-header-info">
-          <div class="chat-avatar">
-            <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
-              <path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <div>
-            <div class="chat-title">MediSense AI</div>
-            <div class="chat-subtitle"><span class="chat-online-dot"></span> Powered by OpenAI GPT-4o</div>
-          </div>
+      <div class="form-card profile-card">
+        <div class="profile-avatar" id="profile-avatar-lg">?</div>
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="p-name" placeholder="Dr. Jane Smith" />
         </div>
-        <div style="display:flex;gap:4px">
-          <button id="chat-clear-btn" class="chat-clear-btn" title="Clear conversation">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
-            </svg>
-          </button>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="p-email" placeholder="you@hospital.com" disabled />
         </div>
-      </div>
-
-      <!-- Messages -->
-      <div id="chat-messages" class="chat-messages"></div>
-
-      <!-- Quick suggestion chips -->
-      <div class="chat-suggestions" id="chat-suggestions">
-        <button class="suggestion-chip" data-msg="Analyze my current vitals and tell me if anything looks concerning.">Analyze my vitals</button>
-        <button class="suggestion-chip" data-msg="What is a normal heart rate range for adults?">Normal heart rate?</button>
-        <button class="suggestion-chip" data-msg="What does low SpO2 mean and when should I worry?">What is low SpO2?</button>
-        <button class="suggestion-chip" data-msg="Give me tips to help lower high blood pressure naturally.">Lower BP tips</button>
-        <button class="suggestion-chip" data-msg="Explain what blood glucose levels mean.">Blood glucose explained</button>
-      </div>
-
-      <!-- Input bar -->
-      <div class="chat-input-area">
-        <textarea id="chat-input" placeholder="Ask anything about your health…" rows="1"></textarea>
-        <button id="chat-send-btn" title="Send message" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+        <div class="field">
+          <label>Department</label>
+          <input type="text" id="p-dept" placeholder="Cardiology" />
+        </div>
+        <div class="field">
+          <label>Hospital ID</label>
+          <input type="text" id="p-hospital" placeholder="HOSP-001" />
+        </div>
+        <button class="btn-primary" id="save-profile-btn">
+          <span>Save Profile</span>
+          <div class="spinner hidden"></div>
         </button>
       </div>
-      <div class="chat-disclaimer">AI responses are informational only — not medical advice.</div>
+    </div>
 
-    </div><!-- /chat-panel -->
-  </div><!-- /ai-chat-widget -->
+    <!-- ── ADMIN ── -->
+    <div id="view-admin" class="view">
+      <div class="view-header">
+        <div>
+          <h2 class="view-title">Admin Panel</h2>
+          <p class="view-sub">Assign patients to doctors</p>
+        </div>
+        <button class="btn-sm" id="admin-refresh-btn">↻ Refresh</button>
+      </div>
 
-  <script>
-  // ════════════════════════════════════════════════════════
-  //  MEDISENSE — OPENAI CHAT WIDGET
-  //
-  //  HOW TO ACTIVATE:
-  //  1. Go to https://platform.openai.com/api-keys
-  //  2. Click "+ Create new secret key"
-  //  3. Replace YOUR_OPENAI_API_KEY below with your key
-  //
-  //  ⚠️  This sends your key from the browser (client-side).
-  //      Fine for local/demo use. For production, route
-  //      requests through your own backend server instead.
-  // ════════════════════════════════════════════════════════
-  (function () {
-    const API_KEY = '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'; // ← paste your key here
-    const API_URL = 'https://api.openai.com/v1/chat/completions';
-    const MODEL   = 'gpt-4o-mini'; // options: gpt-4o-mini (fast/cheap), gpt-4o (smarter)
+      <div class="form-card" style="margin-bottom:20px">
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:16px">👤 Patients</h3>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left;padding:8px 12px;color:var(--text-2);font-weight:500">Name</th>
+                <th style="text-align:left;padding:8px 12px;color:var(--text-2);font-weight:500">Email</th>
+                <th style="text-align:left;padding:8px 12px;color:var(--text-2);font-weight:500">Assigned Doctor</th>
+                <th style="text-align:left;padding:8px 12px;color:var(--text-2);font-weight:500">Action</th>
+              </tr>
+            </thead>
+            <tbody id="admin-patients-tbody">
+              <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-2)">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    // ── DOM refs ────────────────────────────────────────
-    const toggle    = document.getElementById('ai-chat-toggle');
-    const panel     = document.getElementById('ai-chat-panel');
-    const msgs      = document.getElementById('chat-messages');
-    const input     = document.getElementById('chat-input');
-    const sendBtn   = document.getElementById('chat-send-btn');
-    const clearBtn  = document.getElementById('chat-clear-btn');
-    const unread    = document.getElementById('chat-unread');
-    const chatIcon  = document.getElementById('chat-icon');
-    const closeIcon = document.getElementById('close-icon');
-    const suggs     = document.getElementById('chat-suggestions');
+      <div class="form-card">
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:16px">🩺 Doctors</h3>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left;padding:8px 12px;color:var(--text-2);font-weight:500">Name</th>
+                <th style="text-align:left;padding:8px 12px;color:var(--text-2);font-weight:500">Email</th>
+                <th style="text-align:left;padding:8px 12px;color:var(--text-2);font-weight:500">Patients Assigned</th>
+              </tr>
+            </thead>
+            <tbody id="admin-doctors-tbody">
+              <tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-2)">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-    let history = []; // Claude message history
-    let isOpen  = false;
-    let isBusy  = false;
+      <!-- Assignment Modal -->
+      <div id="assign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;min-width:320px;max-width:90%">
+          <h3 style="font-size:16px;font-weight:600;margin-bottom:6px">Assign Patient to Doctor</h3>
+          <p id="assign-patient-label" style="font-size:13px;color:var(--text-2);margin-bottom:16px"></p>
+          <select id="assign-doctor-select" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;margin-bottom:16px">
+            <option value="">— Select a doctor —</option>
+          </select>
+          <div style="display:flex;gap:10px">
+            <button id="assign-confirm-btn" class="btn-primary" style="flex:1">Confirm</button>
+            <button id="assign-cancel-btn" class="btn-sm" style="flex:1">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    // ── Build greeting + initial bot message ──────────
-    function initGreeting() {
-      // Access the global `state` from medisense.js
-      const appState = (typeof state !== 'undefined') ? state : null;
-      const name = appState?.user?.full_name
-        || appState?.user?.email?.split('@')[0]
-        || null;
+  </main>
+</div><!-- /app -->
 
-      const hasVitals = appState?.vitals?.length > 0;
-      const greeting = name ? `👋 Hi <strong>${name}</strong>!` : '👋 Hello!';
-      const vitalsLine = hasVitals
-        ? `I can see your latest vitals are loaded. Ask me anything about them!`
-        : `No vitals recorded yet — but I can still answer your health questions.`;
 
-      appendBot(`${greeting} I'm your <strong>MediSense AI</strong> assistant, powered by ChatGPT.<br><br>${vitalsLine}<br><br>What would you like to know?`);
-    }
+<!-- ══════════ AI CHAT WIDGET (Anthropic) ══════════ -->
+<div id="ai-chat-widget">
+  <button id="ai-chat-toggle" aria-label="Open AI Health Assistant">
+    <svg id="chat-icon" width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.527 3.66 1.438 5.168L2.5 21.5l4.332-.938A9.954 9.954 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"
+        fill="currentColor" fill-opacity=".18" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <circle cx="8.5"  cy="12" r="1.1" fill="currentColor"/>
+      <circle cx="12"   cy="12" r="1.1" fill="currentColor"/>
+      <circle cx="15.5" cy="12" r="1.1" fill="currentColor"/>
+    </svg>
+    <svg id="close-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" style="display:none">
+      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+    <span id="chat-unread" class="chat-unread">1</span>
+  </button>
 
-    // ── Build vitals context for Claude system prompt ─
-    function buildVitalsContext() {
-      const appState = (typeof state !== 'undefined') ? state : null;
-      const v = appState?.vitals?.[0];
-      if (!v) return 'No vitals data has been recorded yet.';
+  <div id="ai-chat-panel" class="chat-panel hidden">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-avatar">
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+            <path d="M16 7v18M7 16h18" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="chat-title">MediSense AI</div>
+          <div class="chat-subtitle"><span class="chat-online-dot"></span>Powered by Claude</div>
+        </div>
+      </div>
+      <button id="chat-clear-btn" class="chat-clear-btn" title="Clear conversation">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>
+        </svg>
+      </button>
+    </div>
+    <div id="chat-messages" class="chat-messages"></div>
+    <div class="chat-suggestions" id="chat-suggestions">
+      <button class="suggestion-chip" data-msg="Analyze my current vitals and tell me if anything looks concerning.">Analyze my vitals</button>
+      <button class="suggestion-chip" data-msg="What is a normal heart rate range for adults?">Normal heart rate?</button>
+      <button class="suggestion-chip" data-msg="What does low SpO2 mean and when should I worry?">What is low SpO₂?</button>
+      <button class="suggestion-chip" data-msg="Give me tips to help lower high blood pressure naturally.">Lower BP tips</button>
+    </div>
+    <div class="chat-input-area">
+      <textarea id="chat-input" placeholder="Ask anything about your health…" rows="1"></textarea>
+      <button id="chat-send-btn" title="Send" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="chat-disclaimer">AI responses are informational only — not medical advice.</div>
+  </div>
+</div>
 
-      const fmt = (val, unit) => val != null ? `${val} ${unit}` : 'N/A';
-      const ts  = v.recorded_at
-        ? new Date(v.recorded_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
-        : 'unknown time';
 
-      return [
-        `Most recent patient vitals (recorded ${ts}):`,
-        `• Heart Rate:        ${fmt(v.heart_rate, 'bpm')}`,
-        `• SpO₂:             ${fmt(v.spo2, '%')}`,
-        `• Temperature:      ${fmt(v.temperature, '°C')}`,
-        `• Blood Pressure:   ${v.bp_systolic != null ? `${v.bp_systolic}/${v.bp_diastolic} mmHg` : 'N/A'}`,
-        `• Respiratory Rate: ${fmt(v.resp_rate, '/min')}`,
-        `• Blood Glucose:    ${fmt(v.blood_glucose, 'mg/dL')}`,
-      ].join('\n');
-    }
+<script src="medisense-db.js"></script>
+<script src="medisense-sheets.js"></script>
+<script src="medisense.js"></script>
 
-    function buildSystemPrompt() {
-      const appState = (typeof state !== 'undefined') ? state : null;
-      const role = appState?.role || 'healthcare professional';
-      return `You are MediSense AI, a smart clinical assistant embedded in a hospital vitals monitoring dashboard. You are speaking with a ${role}.
+<!-- Chat widget script (Anthropic) -->
+<script>
+(function () {
+  const toggle    = document.getElementById('ai-chat-toggle');
+  const panel     = document.getElementById('ai-chat-panel');
+  const msgs      = document.getElementById('chat-messages');
+  const input     = document.getElementById('chat-input');
+  const sendBtn   = document.getElementById('chat-send-btn');
+  const clearBtn  = document.getElementById('chat-clear-btn');
+  const unread    = document.getElementById('chat-unread');
+  const chatIcon  = document.getElementById('chat-icon');
+  const closeIcon = document.getElementById('close-icon');
+  const suggs     = document.getElementById('chat-suggestions');
+
+  let history = [];
+  let isOpen  = false;
+  let isBusy  = false;
+
+  function buildVitalsContext() {
+    const appState = (typeof state !== 'undefined') ? state : null;
+    const v = appState?.vitals?.[0];
+    if (!v) return 'No vitals data has been recorded yet.';
+    const fmt = (val, unit) => val != null ? `${val} ${unit}` : 'N/A';
+    const ts  = v.recorded_at
+      ? new Date(v.recorded_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })
+      : 'unknown time';
+    return [
+      `Most recent patient vitals (recorded ${ts}):`,
+      `• Heart Rate:        ${fmt(v.heart_rate, 'bpm')}`,
+      `• SpO₂:             ${fmt(v.spo2, '%')}`,
+      `• Temperature:      ${fmt(v.temperature, '°C')}`,
+      `• Blood Pressure:   ${v.bp_systolic != null ? `${v.bp_systolic}/${v.bp_diastolic} mmHg` : 'N/A'}`,
+      `• Respiratory Rate: ${fmt(v.resp_rate, '/min')}`,
+      `• Blood Glucose:    ${fmt(v.blood_glucose, 'mg/dL')}`,
+    ].join('\n');
+  }
+
+  function buildSystemPrompt() {
+    const appState = (typeof state !== 'undefined') ? state : null;
+    const role = appState?.role || 'healthcare professional';
+    return `You are MediSense AI, a smart clinical assistant embedded in a hospital vitals monitoring dashboard. You are speaking with a ${role}.
 
 ${buildVitalsContext()}
 
 Guidelines:
-- Be concise (under 120 words unless detailed explanation is requested)
+- Be concise (under 120 words unless a detailed explanation is requested)
 - Reference actual vitals data above when relevant
 - Use plain language for family members, clinical language for doctors
 - Use bullet points for lists
@@ -673,161 +805,150 @@ Guidelines:
 - Never diagnose, prescribe, or replace a physician
 - Always remind users this is informational, not medical advice
 - If asked something unrelated to health/medicine, politely redirect`;
-    }
+  }
 
-    // ── Open / close ─────────────────────────────────
-    toggle.addEventListener('click', () => {
-      isOpen = !isOpen;
-      panel.classList.toggle('hidden', !isOpen);
-      chatIcon.style.display  = isOpen ? 'none'  : 'block';
-      closeIcon.style.display = isOpen ? 'block' : 'none';
-      unread.style.display    = 'none';
-      if (isOpen) {
-        if (msgs.children.length === 0) initGreeting();
-        setTimeout(() => input.focus(), 100);
-        msgs.scrollTop = msgs.scrollHeight;
+  function initGreeting() {
+    const appState = (typeof state !== 'undefined') ? state : null;
+    const name = appState?.user?.full_name || appState?.user?.email?.split('@')[0] || null;
+    const hasVitals = appState?.vitals?.length > 0;
+    const greeting  = name ? `👋 Hi <strong>${escHtml(name)}</strong>!` : '👋 Hello!';
+    const vitalsLine = hasVitals
+      ? 'I can see your latest vitals are loaded. Ask me anything about them!'
+      : 'No vitals recorded yet — but I can still answer your health questions.';
+    appendBot(`${greeting} I'm your <strong>MediSense AI</strong> assistant, powered by Claude.<br><br>${vitalsLine}<br><br>What would you like to know?`);
+  }
+
+  toggle.addEventListener('click', () => {
+    isOpen = !isOpen;
+    panel.classList.toggle('hidden', !isOpen);
+    chatIcon.style.display  = isOpen ? 'none'  : 'block';
+    closeIcon.style.display = isOpen ? 'block' : 'none';
+    unread.style.display    = 'none';
+    if (isOpen) {
+      if (msgs.children.length === 0) initGreeting();
+      setTimeout(() => input.focus(), 100);
+      msgs.scrollTop = msgs.scrollHeight;
+    }
+  });
+
+  setTimeout(() => { if (!isOpen) unread.style.display = 'flex'; }, 2000);
+
+  clearBtn.addEventListener('click', () => {
+    history = [];
+    msgs.innerHTML = '';
+    initGreeting();
+    suggs.style.display = 'flex';
+  });
+
+  suggs.addEventListener('click', e => {
+    const chip = e.target.closest('.suggestion-chip');
+    if (!chip) return;
+    input.value = chip.dataset.msg;
+    suggs.style.display = 'none';
+    sendMessage();
+  });
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+    sendBtn.disabled = !input.value.trim() || isBusy;
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  sendBtn.addEventListener('click', sendMessage);
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text || isBusy) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    suggs.style.display = 'none';
+    isBusy = true;
+
+    appendUser(text);
+    history.push({ role: 'user', content: text });
+    const typingEl = appendTyping();
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          model:      'claude-sonnet-4-20250514',
+          max_tokens: 800,
+          system:     buildSystemPrompt(),
+          messages:   history,
+        }),
+      });
+
+      const data = await res.json();
+      typingEl.remove();
+
+      if (data.error) {
+        appendBot(`⚠️ API error: ${escHtml(data.error.message || 'Unknown error')}<br><br>💡 <strong>Note:</strong> The AI chat requires an Anthropic API key configured on a backend server for production use.`);
+      } else {
+        const reply = data.content?.[0]?.text || 'No response generated.';
+        history.push({ role: 'assistant', content: reply });
+        appendBot(renderMarkdown(reply));
       }
-    });
-
-    // Hide unread badge on open, show after 2s on first load
-    setTimeout(() => { if (!isOpen) unread.style.display = 'flex'; }, 2000);
-
-    // ── Clear chat ───────────────────────────────────
-    clearBtn.addEventListener('click', () => {
-      history = [];
-      msgs.innerHTML = '';
-      initGreeting();
-      suggs.style.display = 'flex';
-    });
-
-    // ── Suggestion chips ─────────────────────────────
-    suggs.addEventListener('click', e => {
-      const chip = e.target.closest('.suggestion-chip');
-      if (!chip) return;
-      input.value = chip.dataset.msg;
-      suggs.style.display = 'none';
-      sendMessage();
-    });
-
-    // ── Input handling ────────────────────────────────
-    input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 100) + 'px';
-      sendBtn.disabled = !input.value.trim() || isBusy;
-    });
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-    });
-    sendBtn.addEventListener('click', sendMessage);
-
-    // ── Core send logic ───────────────────────────────
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text || isBusy) return;
-
-      input.value = '';
-      input.style.height = 'auto';
-      sendBtn.disabled = true;
-      suggs.style.display = 'none';
-      isBusy = true;
-
-      appendUser(text);
-      history.push({ role: 'user', content: text });
-
-      const typingEl = appendTyping();
-
-      try {
-        // OpenAI expects system prompt as the first message in the array
-        const messages = [
-          { role: 'system', content: buildSystemPrompt() },
-          ...history,
-        ];
-
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: MODEL,
-            max_tokens: 800,
-            messages,
-          }),
-        });
-
-        const data = await res.json();
-        typingEl.remove();
-
-        if (data.error) {
-          const msg = data.error.message || 'Unknown error';
-          const hint = API_KEY === 'YOUR_OPENAI_API_KEY'
-            ? '<br><br>💡 <strong>Tip:</strong> Paste your OpenAI API key in <code>index.html</code> where it says <code>YOUR_OPENAI_API_KEY</code>.'
-            : '';
-          appendBot(`⚠️ API error: ${escHtml(msg)}${hint}`);
-        } else {
-          const reply = data.choices?.[0]?.message?.content || 'No response generated.';
-          history.push({ role: 'assistant', content: reply });
-          appendBot(renderMarkdown(reply));
-        }
-
-      } catch (err) {
-        typingEl.remove();
-        appendBot(`⚠️ Network error — please check your connection and try again.`);
-      }
-
-      isBusy = false;
-      sendBtn.disabled = !input.value.trim();
-      input.focus();
+    } catch (err) {
+      typingEl.remove();
+      appendBot(`⚠️ Network error — please check your connection and try again.`);
     }
 
-    // ── Render helpers ────────────────────────────────
-    function appendUser(text) {
-      const el = document.createElement('div');
-      el.className = 'chat-msg user';
-      el.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
-      msgs.appendChild(el);
-      msgs.scrollTop = msgs.scrollHeight;
-    }
+    isBusy = false;
+    sendBtn.disabled = !input.value.trim();
+    input.focus();
+  }
 
-    function appendBot(html) {
-      const el = document.createElement('div');
-      el.className = 'chat-msg ai';
-      el.innerHTML = `<div class="msg-bubble">${html}</div>`;
-      msgs.appendChild(el);
-      msgs.scrollTop = msgs.scrollHeight;
-      return el;
-    }
+  function appendUser(text) {
+    const el = document.createElement('div');
+    el.className = 'chat-msg user';
+    el.innerHTML = `<div class="msg-bubble">${escHtml(text)}</div>`;
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
 
-    function appendTyping() {
-      const el = document.createElement('div');
-      el.className = 'chat-msg ai chat-typing';
-      el.innerHTML = `<div class="msg-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
-      msgs.appendChild(el);
-      msgs.scrollTop = msgs.scrollHeight;
-      return el;
-    }
+  function appendBot(html) {
+    const el = document.createElement('div');
+    el.className = 'chat-msg ai';
+    el.innerHTML = `<div class="msg-bubble">${html}</div>`;
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+    return el;
+  }
 
-    // Minimal markdown → HTML (bold, italic, code, bullets, line breaks)
-    function renderMarkdown(text) {
-      return escHtml(text)
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g,     '<em>$1</em>')
-        .replace(/_(.+?)_/g,       '<em>$1</em>')
-        .replace(/`(.+?)`/g,       '<code>$1</code>')
-        .replace(/^[•\-] (.+)/gm,  '<li>$1</li>')
-        .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
-        .replace(/\n/g,            '<br>');
-    }
+  function appendTyping() {
+    const el = document.createElement('div');
+    el.className = 'chat-msg ai chat-typing';
+    el.innerHTML = `<div class="msg-bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+    return el;
+  }
 
-    function escHtml(str) {
-      return String(str)
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
+  function renderMarkdown(text) {
+    return escHtml(text)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,     '<em>$1</em>')
+      .replace(/_(.+?)_/g,       '<em>$1</em>')
+      .replace(/`(.+?)`/g,       '<code>$1</code>')
+      .replace(/^[•\-] (.+)/gm,  '<li>$1</li>')
+      .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+      .replace(/\n/g,            '<br>');
+  }
 
-  })();
-  </script>
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+})();
+</script>
 
 </body>
 </html>

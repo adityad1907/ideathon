@@ -28,8 +28,7 @@
   // ──────────────────────────────────────────────────────────
   //  ⚠️  YOUR APPS SCRIPT URL — do not change this line
   // ──────────────────────────────────────────────────────────
-  const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxwdEYcQqYqNatZDEjQgkCv6RVwP-7mxEJJaro0gKoADMwcbfhq8hKKUHNYTj5HVXIh/exec';
-
+  const SHEETS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbxVtIcXdrsgAOqbEmBDz7_JRf2IaQ9lYVYdmkriQpaqnkt_Jrff3_y7QXSUorH0vDnf/exec'
   const CONFIGURED = !SHEETS_WEBAPP_URL.includes('YOUR_APPS_SCRIPT');
 
   // ──────────────────────────────────────────────────────────

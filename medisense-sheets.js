@@ -94,20 +94,19 @@
      * Doctors get everything; family only get their own.
      */
     async syncVitals(userId, role) {
-      const res = await get('getVitals', { userId, role: role || 'family' });
-      if (!res.ok || !res.data?.length) return [];
+  const res = await get('getVitals', { userId, role: role || 'family' });
+  if (!res.ok || !res.data?.length) return [];
 
-      const existing = new Set(DB.all('vitals').map(r => r.id));
-      let added = 0;
-      res.data.forEach(row => {
-        if (!existing.has(row.id)) {
-          DB.insert('vitals', row);
-          added++;
-        }
-      });
-      if (added > 0) console.log(`[Sheets] Synced ${added} new vital(s) from Sheets`);
-      return res.data;
-    },
+  // This must match the table name in medisense.js
+  const existing = new Set(DB.all('vitals').map(r => r.id)); 
+  
+  res.data.forEach(row => {
+    if (!existing.has(row.id)) {
+      DB.insert('vitals', row); // Use 'vitals' here too
+    }
+  });
+  return res.data;
+}
 
     // ── USERS ───────────────────────────────────────────────
 

@@ -97,11 +97,11 @@
       const res = await get('getVitals', { userId, role: role || 'family' });
       if (!res.ok || !res.data?.length) return [];
 
-      const existing = new Set(DB.all('vital_signs').map(r => r.id));
+      const existing = new Set(DB.all('vitals').map(r => r.id));
       let added = 0;
       res.data.forEach(row => {
         if (!existing.has(row.id)) {
-          DB.insert('vital_signs', row);
+          DB.insert('vitals', row);
           added++;
         }
       });
